@@ -2,7 +2,8 @@ defmodule EverStead.Simulation.JobManagerTest do
   use ExUnit.Case, async: false
 
   alias EverStead.Simulation.{JobManager, VillagerServer, VillagerSupervisor}
-  alias EverStead.Entities.{Job, Resource}
+  alias EverStead.Entities.World.Kingdom.Job
+  alias EverStead.Entities.World.Resource
 
   setup do
     # Clean up villagers from previous tests

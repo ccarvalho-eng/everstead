@@ -14,19 +14,12 @@ defmodule EverStead.Simulation.VillagerServer do
   use GenServer
   require Logger
 
-  alias EverStead.Entities.{Job, Season, Villager}
+  alias EverStead.Constants
+  alias EverStead.Entities.World.Kingdom.Villager
+  alias EverStead.Entities.World.Kingdom.Job
+  alias EverStead.World
 
   @type init_arg :: {String.t(), String.t(), String.t()}
-
-  # Resource gathering rates per tick
-  @gathering_rates %{
-    wood: 5,
-    stone: 3,
-    food: 8
-  }
-
-  # Movement speed (tiles per tick)
-  @movement_speed 1
 
   # Client API
 
@@ -97,7 +90,7 @@ defmodule EverStead.Simulation.VillagerServer do
       id: villager_id,
       name: villager_name,
       state: :idle,
-      job: nil,
+      profession: nil,
       location: {0, 0},
       inventory: %{}
     }
@@ -183,7 +176,7 @@ defmodule EverStead.Simulation.VillagerServer do
   defp process_gathering(state) do
     job = state.current_job
     resource_type = job.target.type
-    base_rate = @gathering_rates[resource_type] || 5
+    base_rate = Constants.gathering_rate(resource_type)
 
     # Apply seasonal multipliers (you can get season from WorldServer in real implementation)
     # For now, using base rate
@@ -201,17 +194,17 @@ defmodule EverStead.Simulation.VillagerServer do
     %{state | villager: updated_villager}
   end
 
-  @spec process_gathering_with_season(map(), Season.season_type()) :: map()
+  @spec process_gathering_with_season(map(), Constants.season_type()) :: map()
   def process_gathering_with_season(state, season) do
     job = state.current_job
     resource_type = job.target.type
-    base_rate = @gathering_rates[resource_type] || 5
+    base_rate = Constants.gathering_rate(resource_type)
 
     # Apply seasonal multiplier
     multiplier =
       case resource_type do
-        :food -> Season.farming_multiplier(season)
-        _ -> Season.resource_multiplier(season)
+        :food -> World.farming_multiplier(season)
+        _ -> World.resource_multiplier(season)
       end
 
     gathered = floor(base_rate * multiplier)
@@ -273,8 +266,9 @@ defmodule EverStead.Simulation.VillagerServer do
 
   @spec move_towards({integer(), integer()}, {integer(), integer()}) :: {integer(), integer()}
   defp move_towards({x1, y1}, {x2, y2}) do
-    dx = clamp(x2 - x1, -@movement_speed, @movement_speed)
-    dy = clamp(y2 - y1, -@movement_speed, @movement_speed)
+    speed = Constants.movement_speed()
+    dx = clamp(x2 - x1, -speed, speed)
+    dy = clamp(y2 - y1, -speed, speed)
     {x1 + dx, y1 + dy}
   end
 
@@ -293,9 +287,9 @@ defmodule EverStead.Simulation.VillagerServer do
       iex> VillagerServer.get_gathering_rate(:wood)
       5
   """
-  @spec get_gathering_rate(Villager.resource_type()) :: integer()
+  @spec get_gathering_rate(Constants.resource_type()) :: integer()
   def get_gathering_rate(resource_type) do
-    @gathering_rates[resource_type] || 5
+    Constants.gathering_rate(resource_type)
   end
 
   @doc """
@@ -307,5 +301,5 @@ defmodule EverStead.Simulation.VillagerServer do
       1
   """
   @spec get_movement_speed() :: integer()
-  def get_movement_speed, do: @movement_speed
+  def get_movement_speed, do: Constants.movement_speed()
 end

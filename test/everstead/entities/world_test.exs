@@ -2,17 +2,18 @@ defmodule EverStead.Entities.WorldTest do
   use ExUnit.Case, async: true
 
   alias EverStead.Entities.World
-  alias EverStead.Entities.Tile
+  alias EverStead.Entities.World.{Season, Tile}
 
   test "creates a world with valid attributes" do
     tile = struct(Tile)
+    season = %Season{current: :summer}
 
     attributes = %{
       width: 100,
       height: 100,
       tiles: %{{0, 0} => tile},
       day: 1,
-      season: :summer
+      season: season
     }
 
     world = struct(World, attributes)
@@ -21,7 +22,7 @@ defmodule EverStead.Entities.WorldTest do
     assert world.height == 100
     assert world.tiles == %{{0, 0} => tile}
     assert world.day == 1
-    assert world.season == :summer
+    assert world.season == season
   end
 
   test "creates a world with default values" do
@@ -36,6 +37,6 @@ defmodule EverStead.Entities.WorldTest do
     assert world.height == 50
     assert world.tiles == %{}
     assert world.day == 0
-    assert world.season == :spring
+    assert world.season == nil
   end
 end

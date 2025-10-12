@@ -41,14 +41,13 @@ defmodule EverStead.Simulation.PlayerSupervisor do
   @doc """
   Broadcasts a tick event to all registered player servers.
 
-  Looks up all player processes in the player registry and sends them
+  Iterates through all player processes in the player registry and sends them
   a `:tick` message to trigger simulation updates.
   """
   @spec broadcast_tick() :: :ok
   def broadcast_tick do
-    for {pid, _} <- Registry.lookup(EverStead.PlayerRegistry, :player) do
-      send(pid, :tick)
-    end
+    Registry.select(EverStead.PlayerRegistry, [{{:"$1", :"$2", :"$3"}, [], [:"$2"]}])
+    |> Enum.each(fn pid -> send(pid, :tick) end)
 
     :ok
   end

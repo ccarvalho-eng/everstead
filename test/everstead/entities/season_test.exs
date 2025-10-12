@@ -1,36 +1,37 @@
 defmodule EverStead.Entities.SeasonTest do
   use ExUnit.Case, async: true
 
-  alias EverStead.Entities.Season
+  alias EverStead.Entities.World.Season
+  alias EverStead.World
 
   describe "season_duration/0" do
     test "returns the configured season duration" do
-      assert Season.season_duration() == 60
+      assert World.season_duration() == 60
     end
   end
 
   describe "next_season/1" do
     test "returns summer after spring" do
-      assert Season.next_season(:spring) == :summer
+      assert World.next_season(:spring) == :summer
     end
 
     test "returns fall after summer" do
-      assert Season.next_season(:summer) == :fall
+      assert World.next_season(:summer) == :fall
     end
 
     test "returns winter after fall" do
-      assert Season.next_season(:fall) == :winter
+      assert World.next_season(:fall) == :winter
     end
 
     test "returns spring after winter (cycles back)" do
-      assert Season.next_season(:winter) == :spring
+      assert World.next_season(:winter) == :spring
     end
   end
 
-  describe "tick/1" do
+  describe "tick_season/1" do
     test "increments ticks_elapsed by 1" do
       season = %Season{current: :spring, ticks_elapsed: 10, year: 1}
-      updated = Season.tick(season)
+      updated = World.tick_season(season)
 
       assert updated.ticks_elapsed == 11
       assert updated.current == :spring
@@ -39,7 +40,7 @@ defmodule EverStead.Entities.SeasonTest do
 
     test "progresses to next season when duration is reached" do
       season = %Season{current: :spring, ticks_elapsed: 59, year: 1}
-      updated = Season.tick(season)
+      updated = World.tick_season(season)
 
       assert updated.current == :summer
       assert updated.ticks_elapsed == 0
@@ -48,7 +49,7 @@ defmodule EverStead.Entities.SeasonTest do
 
     test "increments year when winter transitions to spring" do
       season = %Season{current: :winter, ticks_elapsed: 59, year: 1}
-      updated = Season.tick(season)
+      updated = World.tick_season(season)
 
       assert updated.current == :spring
       assert updated.ticks_elapsed == 0
@@ -59,22 +60,22 @@ defmodule EverStead.Entities.SeasonTest do
       season = %Season{current: :spring, ticks_elapsed: 0, year: 1}
 
       # Advance through spring
-      season = Enum.reduce(1..60, season, fn _, s -> Season.tick(s) end)
+      season = Enum.reduce(1..60, season, fn _, s -> World.tick_season(s) end)
       assert season.current == :summer
       assert season.ticks_elapsed == 0
 
       # Advance through summer
-      season = Enum.reduce(1..60, season, fn _, s -> Season.tick(s) end)
+      season = Enum.reduce(1..60, season, fn _, s -> World.tick_season(s) end)
       assert season.current == :fall
       assert season.ticks_elapsed == 0
 
       # Advance through fall
-      season = Enum.reduce(1..60, season, fn _, s -> Season.tick(s) end)
+      season = Enum.reduce(1..60, season, fn _, s -> World.tick_season(s) end)
       assert season.current == :winter
       assert season.ticks_elapsed == 0
 
       # Advance through winter - should go to year 2
-      season = Enum.reduce(1..60, season, fn _, s -> Season.tick(s) end)
+      season = Enum.reduce(1..60, season, fn _, s -> World.tick_season(s) end)
       assert season.current == :spring
       assert season.ticks_elapsed == 0
       assert season.year == 2
@@ -83,64 +84,64 @@ defmodule EverStead.Entities.SeasonTest do
 
   describe "resource_multiplier/1" do
     test "returns 1.0 for spring" do
-      assert Season.resource_multiplier(:spring) == 1.0
+      assert World.resource_multiplier(:spring) == 1.0
     end
 
     test "returns 1.2 for summer" do
-      assert Season.resource_multiplier(:summer) == 1.2
+      assert World.resource_multiplier(:summer) == 1.2
     end
 
     test "returns 1.1 for fall" do
-      assert Season.resource_multiplier(:fall) == 1.1
+      assert World.resource_multiplier(:fall) == 1.1
     end
 
     test "returns 0.7 for winter" do
-      assert Season.resource_multiplier(:winter) == 0.7
+      assert World.resource_multiplier(:winter) == 0.7
     end
   end
 
   describe "farming_multiplier/1" do
     test "returns 1.3 for spring (planting season)" do
-      assert Season.farming_multiplier(:spring) == 1.3
+      assert World.farming_multiplier(:spring) == 1.3
     end
 
     test "returns 1.5 for summer (growing season)" do
-      assert Season.farming_multiplier(:summer) == 1.5
+      assert World.farming_multiplier(:summer) == 1.5
     end
 
     test "returns 1.2 for fall (harvest season)" do
-      assert Season.farming_multiplier(:fall) == 1.2
+      assert World.farming_multiplier(:fall) == 1.2
     end
 
     test "returns 0.3 for winter (harsh conditions)" do
-      assert Season.farming_multiplier(:winter) == 0.3
+      assert World.farming_multiplier(:winter) == 0.3
     end
   end
 
   describe "construction_multiplier/1" do
     test "returns 1.1 for spring" do
-      assert Season.construction_multiplier(:spring) == 1.1
+      assert World.construction_multiplier(:spring) == 1.1
     end
 
     test "returns 1.2 for summer (ideal conditions)" do
-      assert Season.construction_multiplier(:summer) == 1.2
+      assert World.construction_multiplier(:summer) == 1.2
     end
 
     test "returns 1.0 for fall" do
-      assert Season.construction_multiplier(:fall) == 1.0
+      assert World.construction_multiplier(:fall) == 1.0
     end
 
     test "returns 0.6 for winter (harsh conditions)" do
-      assert Season.construction_multiplier(:winter) == 0.6
+      assert World.construction_multiplier(:winter) == 0.6
     end
   end
 
-  describe "to_string/1" do
+  describe "season_to_string/1" do
     test "returns capitalized season names" do
-      assert Season.to_string(:spring) == "Spring"
-      assert Season.to_string(:summer) == "Summer"
-      assert Season.to_string(:fall) == "Fall"
-      assert Season.to_string(:winter) == "Winter"
+      assert World.season_to_string(:spring) == "Spring"
+      assert World.season_to_string(:summer) == "Summer"
+      assert World.season_to_string(:fall) == "Fall"
+      assert World.season_to_string(:winter) == "Winter"
     end
   end
 

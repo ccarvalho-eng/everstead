@@ -2,7 +2,9 @@ defmodule EverStead.Simulation.VillagerServerTest do
   use ExUnit.Case, async: false
 
   alias EverStead.Simulation.{VillagerServer, VillagerSupervisor}
-  alias EverStead.Entities.{Job, Resource, Villager}
+  alias EverStead.Entities.World.Kingdom.Villager
+  alias EverStead.Entities.World.Kingdom.Job
+  alias EverStead.Entities.World.Resource
 
   setup do
     # Registry and Supervisor are already started by the application

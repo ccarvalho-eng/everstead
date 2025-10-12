@@ -11,6 +11,9 @@ defmodule EverStead.Simulation.PlayerServer do
   use GenServer
   require Logger
 
+  alias EverStead.Entities.Player
+  alias EverStead.Entities.World.Kingdom
+
   @doc """
   Starts a player server process.
 
@@ -24,21 +27,50 @@ defmodule EverStead.Simulation.PlayerServer do
     GenServer.start_link(__MODULE__, {id, name}, name: via_tuple(id))
   end
 
+  @doc """
+  Gets the current player state.
+
+  ## Examples
+
+      iex> PlayerServer.get_state("p1")
+      %Player{id: "p1", name: "Alice", ...}
+  """
+  @spec get_state(String.t()) :: Player.t()
+  def get_state(player_id) do
+    GenServer.call(via_tuple(player_id), :get_state)
+  end
+
   defp via_tuple(id), do: {:via, Registry, {EverStead.PlayerRegistry, id}}
 
   @impl true
   def init({id, name}) do
-    # Minimal player state
-    villagers = %{}
-    buildings = %{}
-    resources = %{wood: 0, stone: 0, food: 0}
-    {:ok, %{id: id, name: name, villagers: villagers, buildings: buildings, resources: resources}}
+    kingdom = %Kingdom{
+      id: "kingdom_#{id}",
+      player_id: id,
+      name: "#{name}'s Kingdom",
+      villagers: %{},
+      buildings: %{},
+      resources: %{wood: 0, stone: 0, food: 0}
+    }
+
+    player = %Player{
+      id: id,
+      name: name,
+      kingdom: kingdom
+    }
+
+    {:ok, player}
   end
 
   @impl true
-  def handle_info(:tick, state) do
+  def handle_call(:get_state, _from, player) do
+    {:reply, player, player}
+  end
+
+  @impl true
+  def handle_info(:tick, player) do
     # Tell JobManager to assign jobs to idle villagers
-    EverStead.Simulation.JobManager.assign_jobs(state.villagers)
-    {:noreply, state}
+    EverStead.Simulation.JobManager.assign_jobs(player.kingdom.villagers)
+    {:noreply, player}
   end
 end

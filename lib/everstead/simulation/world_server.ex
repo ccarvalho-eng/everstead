@@ -20,7 +20,8 @@ defmodule EverStead.Simulation.WorldServer do
 
   require Logger
 
-  alias EverStead.Entities.Season
+  alias EverStead.Entities.World.Season
+  alias EverStead.World
 
   @tick_interval 1_000
 
@@ -74,18 +75,18 @@ defmodule EverStead.Simulation.WorldServer do
 
   @impl true
   def handle_info(:tick, state) do
-    new_season = Season.tick(state.season)
+    new_season = World.tick_season(state.season)
     new_total_ticks = state.total_ticks + 1
 
     # Log season changes
     if new_season.current != state.season.current do
       Logger.info(
-        "Season changed: #{Season.to_string(state.season.current)} -> #{Season.to_string(new_season.current)} (Year #{new_season.year})"
+        "Season changed: #{World.season_to_string(state.season.current)} -> #{World.season_to_string(new_season.current)} (Year #{new_season.year})"
       )
     end
 
     Logger.debug(
-      "World tick ##{new_total_ticks} | #{Season.to_string(new_season.current)} - Day #{new_season.ticks_elapsed + 1}/#{Season.season_duration()}"
+      "World tick ##{new_total_ticks} | #{World.season_to_string(new_season.current)} - Day #{new_season.ticks_elapsed + 1}/#{World.season_duration()}"
     )
 
     # Broadcast tick to all PlayerServers and VillagerServers

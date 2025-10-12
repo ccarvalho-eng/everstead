@@ -1,8 +1,8 @@
 defmodule EverStead.Entities.JobTest do
   use ExUnit.Case, async: true
 
-  alias EverStead.Entities.Job
-  alias EverStead.Entities.Tile
+  alias EverStead.Entities.World.Kingdom.Job
+  alias EverStead.Entities.World.Tile
 
   test "creates a job with valid attributes" do
     tile = struct(Tile, %{terrain: :grass})
@@ -18,7 +18,7 @@ defmodule EverStead.Entities.JobTest do
     assert job.id == "j1"
     assert job.type == :build
     assert job.target == tile
-    assert job.assigned_villager == nil
+    assert job.assigned_villager_id == nil
     assert job.status == :pending
   end
 end

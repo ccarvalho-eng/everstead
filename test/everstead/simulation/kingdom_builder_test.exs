@@ -2,16 +2,31 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
   use ExUnit.Case, async: true
 
   alias EverStead.Simulation.KingdomBuilder
-  alias EverStead.Entities.{Building, Player, Tile}
+  alias EverStead.Entities.Player
+  alias EverStead.Entities.World.Kingdom
+  alias EverStead.Entities.World.Kingdom.Building
+  alias EverStead.Entities.World.Tile
+
+  defp create_player(resources) do
+    kingdom = %Kingdom{
+      id: "k1",
+      player_id: "p1",
+      name: "Test Kingdom",
+      villagers: %{},
+      buildings: %{},
+      resources: resources
+    }
+
+    %Player{
+      id: "p1",
+      name: "Test Player",
+      kingdom: kingdom
+    }
+  end
 
   describe "place_building/4" do
     test "successfully places a building with sufficient resources" do
-      player = %Player{
-        id: "p1",
-        name: "Test Player",
-        resources: %{wood: 100, stone: 50, food: 10}
-      }
-
+      player = create_player(%{wood: 100, stone: 50, food: 10})
       tile = %Tile{terrain: :grass, building_id: nil}
 
       assert {:ok, {updated_player, building}} =
@@ -24,21 +39,16 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       assert is_binary(building.id)
 
       # Verify resources were deducted (house costs: wood: 50, stone: 20)
-      assert updated_player.resources.wood == 50
-      assert updated_player.resources.stone == 30
-      assert updated_player.resources.food == 10
+      assert updated_player.kingdom.resources.wood == 50
+      assert updated_player.kingdom.resources.stone == 30
+      assert updated_player.kingdom.resources.food == 10
 
-      # Verify building was added to player
-      assert Map.has_key?(updated_player.buildings, building.id)
+      # Verify building was added to player's kingdom
+      assert Map.has_key?(updated_player.kingdom.buildings, building.id)
     end
 
     test "fails when resources are insufficient" do
-      player = %Player{
-        id: "p1",
-        name: "Poor Player",
-        resources: %{wood: 10, stone: 5, food: 0}
-      }
-
+      player = create_player(%{wood: 10, stone: 5, food: 0})
       tile = %Tile{terrain: :grass, building_id: nil}
 
       assert {:error, :insufficient_resources} =
@@ -46,11 +56,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
     end
 
     test "fails when terrain is water" do
-      player = %Player{
-        id: "p1",
-        resources: %{wood: 100, stone: 50, food: 10}
-      }
-
+      player = create_player(%{wood: 100, stone: 50, food: 10})
       tile = %Tile{terrain: :water, building_id: nil}
 
       assert {:error, :invalid_terrain} =
@@ -58,11 +64,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
     end
 
     test "fails when terrain is mountain" do
-      player = %Player{
-        id: "p1",
-        resources: %{wood: 100, stone: 50, food: 10}
-      }
-
+      player = create_player(%{wood: 100, stone: 50, food: 10})
       tile = %Tile{terrain: :mountain, building_id: nil}
 
       assert {:error, :invalid_terrain} =
@@ -70,11 +72,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
     end
 
     test "fails when tile is occupied" do
-      player = %Player{
-        id: "p1",
-        resources: %{wood: 100, stone: 50, food: 10}
-      }
-
+      player = create_player(%{wood: 100, stone: 50, food: 10})
       tile = %Tile{terrain: :grass, building_id: "existing_building"}
 
       assert {:error, :tile_occupied} =
@@ -82,11 +80,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
     end
 
     test "successfully places different building types" do
-      player = %Player{
-        id: "p1",
-        resources: %{wood: 200, stone: 100, food: 50}
-      }
-
+      player = create_player(%{wood: 200, stone: 100, food: 50})
       tile = %Tile{terrain: :grass, building_id: nil}
 
       # Test farm
@@ -94,24 +88,24 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
                KingdomBuilder.place_building(player, tile, :farm, {1, 1})
 
       assert farm.type == :farm
-      assert updated_player.resources.wood == 170
-      assert updated_player.resources.stone == 90
+      assert updated_player.kingdom.resources.wood == 170
+      assert updated_player.kingdom.resources.stone == 90
 
       # Test lumberyard
       assert {:ok, {updated_player2, lumberyard}} =
                KingdomBuilder.place_building(updated_player, tile, :lumberyard, {2, 2})
 
       assert lumberyard.type == :lumberyard
-      assert updated_player2.resources.wood == 130
-      assert updated_player2.resources.stone == 60
+      assert updated_player2.kingdom.resources.wood == 130
+      assert updated_player2.kingdom.resources.stone == 60
 
       # Test storage
       assert {:ok, {updated_player3, storage}} =
                KingdomBuilder.place_building(updated_player2, tile, :storage, {3, 3})
 
       assert storage.type == :storage
-      assert updated_player3.resources.wood == 70
-      assert updated_player3.resources.stone == 20
+      assert updated_player3.kingdom.resources.wood == 70
+      assert updated_player3.kingdom.resources.stone == 20
     end
   end
 
@@ -284,11 +278,15 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
 
   describe "cancel_construction/2" do
     test "refunds 50% of resources when construction is less than 50% complete" do
-      player = %Player{
-        id: "p1",
+      kingdom = %Kingdom{
+        id: "k1",
+        player_id: "p1",
+        name: "Test Kingdom",
         resources: %{wood: 10, stone: 5, food: 0},
         buildings: %{"b1" => %Building{id: "b1", type: :house}}
       }
+
+      player = %Player{id: "p1", name: "Test Player", kingdom: kingdom}
 
       building = %Building{
         id: "b1",
@@ -300,20 +298,24 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
 
       # House costs: wood: 50, stone: 20
       # 50% refund: wood: 25, stone: 10
-      assert updated_player.resources.wood == 35
-      assert updated_player.resources.stone == 15
-      assert updated_player.resources.food == 0
+      assert updated_player.kingdom.resources.wood == 35
+      assert updated_player.kingdom.resources.stone == 15
+      assert updated_player.kingdom.resources.food == 0
 
-      # Building should be removed from player
-      refute Map.has_key?(updated_player.buildings, "b1")
+      # Building should be removed from player's kingdom
+      refute Map.has_key?(updated_player.kingdom.buildings, "b1")
     end
 
     test "refunds nothing when construction is 50% or more complete" do
-      player = %Player{
-        id: "p1",
+      kingdom = %Kingdom{
+        id: "k1",
+        player_id: "p1",
+        name: "Test Kingdom",
         resources: %{wood: 10, stone: 5, food: 0},
         buildings: %{"b1" => %Building{id: "b1", type: :house}}
       }
+
+      player = %Player{id: "p1", name: "Test Player", kingdom: kingdom}
 
       building = %Building{
         id: "b1",
@@ -324,11 +326,11 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       {:ok, updated_player} = KingdomBuilder.cancel_construction(player, building)
 
       # No refund
-      assert updated_player.resources.wood == 10
-      assert updated_player.resources.stone == 5
+      assert updated_player.kingdom.resources.wood == 10
+      assert updated_player.kingdom.resources.stone == 5
 
       # Building should still be removed
-      refute Map.has_key?(updated_player.buildings, "b1")
+      refute Map.has_key?(updated_player.kingdom.buildings, "b1")
     end
   end
 

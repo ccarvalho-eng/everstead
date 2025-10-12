@@ -16,7 +16,8 @@ defmodule EverStead.Simulation.JobManager do
   use GenServer
   require Logger
 
-  alias EverStead.Entities.Job
+  alias EverStead.Entities.World.Kingdom.Job
+  alias EverStead.Entities.World.Kingdom.Villager
   alias EverStead.Simulation.VillagerServer
 
   @type priority :: :critical | :high | :normal | :low
