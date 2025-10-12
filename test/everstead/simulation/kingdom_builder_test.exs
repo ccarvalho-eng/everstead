@@ -173,6 +173,100 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
     end
   end
 
+  describe "advance_construction_with_season/3" do
+    test "applies summer bonus (20% faster)" do
+      building = %Building{
+        id: "b1",
+        type: :house,
+        construction_progress: 0
+      }
+
+      # House base rate: 10, Summer multiplier: 1.2, Result: floor(10 * 1.2) = 12
+      updated = KingdomBuilder.advance_construction_with_season(building, :summer, 1)
+      assert updated.construction_progress == 12
+    end
+
+    test "applies spring bonus (10% faster)" do
+      building = %Building{
+        id: "b1",
+        type: :house,
+        construction_progress: 0
+      }
+
+      # House base rate: 10, Spring multiplier: 1.1, Result: floor(10 * 1.1) = 11
+      updated = KingdomBuilder.advance_construction_with_season(building, :spring, 1)
+      assert updated.construction_progress == 11
+    end
+
+    test "applies fall normal speed" do
+      building = %Building{
+        id: "b1",
+        type: :house,
+        construction_progress: 0
+      }
+
+      # House base rate: 10, Fall multiplier: 1.0, Result: 10
+      updated = KingdomBuilder.advance_construction_with_season(building, :fall, 1)
+      assert updated.construction_progress == 10
+    end
+
+    test "applies winter penalty (40% slower)" do
+      building = %Building{
+        id: "b1",
+        type: :house,
+        construction_progress: 0
+      }
+
+      # House base rate: 10, Winter multiplier: 0.6, Result: floor(10 * 0.6) = 6
+      updated = KingdomBuilder.advance_construction_with_season(building, :winter, 1)
+      assert updated.construction_progress == 6
+    end
+
+    test "works with multiple ticks" do
+      building = %Building{
+        id: "b1",
+        type: :house,
+        construction_progress: 0
+      }
+
+      # House base rate: 10, Summer multiplier: 1.2, Result: floor(10 * 1.2) * 5 = 60
+      updated = KingdomBuilder.advance_construction_with_season(building, :summer, 5)
+      assert updated.construction_progress == 60
+    end
+
+    test "caps at 100 even with season bonuses" do
+      building = %Building{
+        id: "b1",
+        type: :house,
+        construction_progress: 95
+      }
+
+      # Would be 95 + 12 = 107, but caps at 100
+      updated = KingdomBuilder.advance_construction_with_season(building, :summer, 1)
+      assert updated.construction_progress == 100
+    end
+
+    test "applies seasons to different building types" do
+      # Farm base rate: 8
+      farm = %Building{id: "b1", type: :farm, construction_progress: 0}
+      # 8 * 1.2 = 9.6, floor = 9
+      assert KingdomBuilder.advance_construction_with_season(farm, :summer).construction_progress ==
+               9
+
+      # Lumberyard base rate: 12
+      lumberyard = %Building{id: "b2", type: :lumberyard, construction_progress: 0}
+      # 12 * 0.6 = 7.2, floor = 7
+      assert KingdomBuilder.advance_construction_with_season(lumberyard, :winter).construction_progress ==
+               7
+
+      # Storage base rate: 15
+      storage = %Building{id: "b3", type: :storage, construction_progress: 0}
+      # 15 * 1.1 = 16.5, floor = 16
+      assert KingdomBuilder.advance_construction_with_season(storage, :spring).construction_progress ==
+               16
+    end
+  end
+
   describe "construction_complete?/1" do
     test "returns true when construction is 100%" do
       building = %Building{construction_progress: 100}

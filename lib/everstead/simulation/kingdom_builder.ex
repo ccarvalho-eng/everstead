@@ -6,7 +6,7 @@ defmodule EverStead.Simulation.KingdomBuilder do
   - Construction progress tracking
   """
 
-  alias EverStead.Entities.{Building, Player, Tile}
+  alias EverStead.Entities.{Building, Player, Season, Tile}
 
   @type build_result :: {:ok, {Player.t(), Building.t()}} | {:error, atom()}
   @type validation_result :: :ok | {:error, atom()}
@@ -72,6 +72,35 @@ defmodule EverStead.Simulation.KingdomBuilder do
   def advance_construction(building, ticks \\ 1) do
     rate = @construction_rates[building.type] || 10
     new_progress = min(building.construction_progress + rate * ticks, 100)
+    %{building | construction_progress: new_progress}
+  end
+
+  @doc """
+  Advances construction progress for a building with seasonal modifiers.
+
+  Takes into account the current season's construction multiplier.
+  - Summer: 20% faster construction
+  - Spring: 10% faster construction
+  - Fall: Normal speed
+  - Winter: 40% slower construction
+
+  ## Examples
+
+      iex> building = %Building{id: "b1", type: :house, construction_progress: 0}
+      iex> KingdomBuilder.advance_construction_with_season(building, :summer, 1)
+      %Building{id: "b1", type: :house, construction_progress: 12}
+
+      iex> building = %Building{id: "b1", type: :house, construction_progress: 0}
+      iex> KingdomBuilder.advance_construction_with_season(building, :winter, 1)
+      %Building{id: "b1", type: :house, construction_progress: 6}
+  """
+  @spec advance_construction_with_season(Building.t(), Season.season_type(), integer()) ::
+          Building.t()
+  def advance_construction_with_season(building, season, ticks \\ 1) do
+    base_rate = @construction_rates[building.type] || 10
+    season_multiplier = Season.construction_multiplier(season)
+    effective_rate = floor(base_rate * season_multiplier)
+    new_progress = min(building.construction_progress + effective_rate * ticks, 100)
     %{building | construction_progress: new_progress}
   end
 

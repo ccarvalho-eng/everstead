@@ -15,8 +15,10 @@ defmodule Everstead.Application do
       # Start a worker by calling: Everstead.Worker.start_link(arg)
       # {Everstead.Worker, arg},
       {Registry, keys: :unique, name: EverStead.PlayerRegistry},
+      {Registry, keys: :unique, name: EverStead.VillagerRegistry},
       EverStead.Simulation.WorldServer,
       {EverStead.Simulation.PlayerSupervisor, []},
+      {EverStead.Simulation.VillagerSupervisor, []},
       EverStead.Simulation.JobManager,
       # Start to serve requests, typically the last entry
       EversteadWeb.Endpoint
