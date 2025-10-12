@@ -7,7 +7,13 @@ defmodule EverStead.Entities.World.Kingdom.Villager do
   """
   use TypedStruct
 
-  alias EverStead.Entities.Types
+  alias EverStead.Entities.World.Resource
+  alias EverStead.Entities.World.Tile
+
+  @typedoc """
+  Villager profession types.
+  """
+  @type profession_type :: :builder | :farmer | :miner
 
   @type state :: :idle | :working | :moving | :resting
 
@@ -15,8 +21,8 @@ defmodule EverStead.Entities.World.Kingdom.Villager do
     field :id, String.t()
     field :name, String.t()
     field :state, state(), default: :idle
-    field :profession, Types.profession_type() | nil, default: nil
-    field :location, Types.coordinate(), default: {0, 0}
-    field :inventory, Types.resource_inventory(), default: %{}
+    field :profession, profession_type() | nil, default: nil
+    field :location, Tile.coordinate(), default: {0, 0}
+    field :inventory, Resource.resource_inventory(), default: %{}
   end
 end

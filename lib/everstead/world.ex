@@ -6,7 +6,6 @@ defmodule EverStead.World do
   """
 
   alias EverStead.Constants
-  alias EverStead.Entities.Types
   alias EverStead.Entities.World.Season
 
   @season_duration Constants.season_duration()
@@ -33,7 +32,7 @@ defmodule EverStead.World do
       iex> World.next_season(:winter)
       :spring
   """
-  @spec next_season(Types.season_type()) :: Types.season_type()
+  @spec next_season(Season.season_type()) :: Season.season_type()
   def next_season(:spring), do: :summer
   def next_season(:summer), do: :fall
   def next_season(:fall), do: :winter
@@ -79,7 +78,7 @@ defmodule EverStead.World do
       iex> World.resource_multiplier(:winter)
       0.7
   """
-  @spec resource_multiplier(Types.season_type()) :: float()
+  @spec resource_multiplier(Season.season_type()) :: float()
   def resource_multiplier(season), do: Constants.resource_multiplier(season)
 
   @doc """
@@ -93,7 +92,7 @@ defmodule EverStead.World do
       iex> World.farming_multiplier(:winter)
       0.3
   """
-  @spec farming_multiplier(Types.season_type()) :: float()
+  @spec farming_multiplier(Season.season_type()) :: float()
   def farming_multiplier(season), do: Constants.farming_multiplier(season)
 
   @doc """
@@ -107,7 +106,7 @@ defmodule EverStead.World do
       iex> World.construction_multiplier(:winter)
       0.6
   """
-  @spec construction_multiplier(Types.season_type()) :: float()
+  @spec construction_multiplier(Season.season_type()) :: float()
   def construction_multiplier(season), do: Constants.construction_multiplier(season)
 
   @doc """
@@ -118,7 +117,7 @@ defmodule EverStead.World do
       iex> World.season_to_string(:spring)
       "Spring"
   """
-  @spec season_to_string(Types.season_type()) :: String.t()
+  @spec season_to_string(Season.season_type()) :: String.t()
   def season_to_string(season) do
     season
     |> Atom.to_string()

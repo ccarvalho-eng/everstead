@@ -7,10 +7,14 @@ defmodule EverStead.Entities.World.Season do
   """
   use TypedStruct
 
-  alias EverStead.Constants
+  @typedoc """
+  Season types in the game world.
+  Seasons cycle through: spring -> summer -> fall -> winter -> spring
+  """
+  @type season_type :: :spring | :summer | :fall | :winter
 
   typedstruct do
-    field :current, Constants.season_type(), default: :spring
+    field :current, season_type(), default: :spring
     field :ticks_elapsed, integer(), default: 0
     field :year, integer(), default: 1
   end

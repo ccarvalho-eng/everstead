@@ -9,6 +9,11 @@ defmodule EverStead.Entities.World.Tile do
 
   alias EverStead.Entities.World.Resource
 
+  @typedoc """
+  Coordinate tuple representing a position on the world map.
+  """
+  @type coordinate :: {integer(), integer()}
+
   @type terrain :: :grass | :forest | :water | :mountain
 
   typedstruct do

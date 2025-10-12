@@ -8,11 +8,21 @@ defmodule EverStead.Entities.World.Resource do
   """
   use TypedStruct
 
-  alias EverStead.Entities.Types
+  alias EverStead.Entities.World.Tile
+
+  @typedoc """
+  Resource types available in the game.
+  """
+  @type resource_type :: :wood | :stone | :food
+
+  @typedoc """
+  Resource inventory mapping resource types to amounts.
+  """
+  @type resource_inventory :: %{optional(resource_type()) => integer()}
 
   typedstruct do
-    field :type, Types.resource_type()
+    field :type, resource_type()
     field :amount, integer(), default: 0
-    field :location, Types.coordinate() | nil, default: nil
+    field :location, Tile.coordinate() | nil, default: nil
   end
 end
