@@ -1,14 +1,14 @@
 defmodule EverStead.Entities.VillagerTest do
   use ExUnit.Case, async: true
 
-  alias EverStead.Entities.Villager
+  alias EverStead.Entities.World.Kingdom.Villager
 
   test "creates a villager with valid attributes" do
     attributes = %{
       id: "v1",
       name: "John",
       state: :working,
-      job: :builder,
+      profession: :builder,
       location: {3, 4},
       inventory: %{wood: 10}
     }
@@ -18,7 +18,7 @@ defmodule EverStead.Entities.VillagerTest do
     assert villager.id == "v1"
     assert villager.name == "John"
     assert villager.state == :working
-    assert villager.job == :builder
+    assert villager.profession == :builder
     assert villager.location == {3, 4}
     assert villager.inventory == %{wood: 10}
   end
@@ -34,7 +34,7 @@ defmodule EverStead.Entities.VillagerTest do
     assert villager.id == "v2"
     assert villager.name == "Jane"
     assert villager.state == :idle
-    assert villager.job == nil
+    assert villager.profession == nil
     assert villager.location == {0, 0}
     assert villager.inventory == %{}
   end
