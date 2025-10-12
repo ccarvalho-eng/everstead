@@ -14,6 +14,10 @@ defmodule Everstead.Application do
       {Phoenix.PubSub, name: Everstead.PubSub},
       # Start a worker by calling: Everstead.Worker.start_link(arg)
       # {Everstead.Worker, arg},
+      {Registry, keys: :unique, name: EverStead.PlayerRegistry},
+      EverStead.Simulation.WorldServer,
+      {EverStead.Simulation.PlayerSupervisor, []},
+      EverStead.Simulation.JobManager,
       # Start to serve requests, typically the last entry
       EversteadWeb.Endpoint
     ]
