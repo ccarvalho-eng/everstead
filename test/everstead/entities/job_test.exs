@@ -6,6 +6,7 @@ defmodule EverStead.Entities.JobTest do
 
   test "creates a job with valid attributes" do
     tile = struct(Tile, %{terrain: :grass})
+
     attributes = %{
       id: "j1",
       type: :build,

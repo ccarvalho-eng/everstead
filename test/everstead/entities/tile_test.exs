@@ -6,6 +6,7 @@ defmodule EverStead.Entities.TileTest do
 
   test "creates a tile with valid attributes" do
     resource = struct(Resource, %{type: :wood, amount: 100})
+
     attributes = %{
       terrain: :forest,
       resource: resource,

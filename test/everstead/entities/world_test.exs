@@ -6,6 +6,7 @@ defmodule EverStead.Entities.WorldTest do
 
   test "creates a world with valid attributes" do
     tile = struct(Tile)
+
     attributes = %{
       width: 100,
       height: 100,
@@ -28,6 +29,7 @@ defmodule EverStead.Entities.WorldTest do
       width: 50,
       height: 50
     }
+
     world = struct(World, attributes)
 
     assert world.width == 50
