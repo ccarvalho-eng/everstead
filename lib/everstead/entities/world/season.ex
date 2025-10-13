@@ -1,21 +1,34 @@
 defmodule EverStead.Entities.World.Season do
   @moduledoc """
-  Represents a season in the game world.
-
-  Seasons cycle through Spring, Summer, Fall, and Winter.
-  Season progression and effects are handled by the World context.
+  Season entity with cycle and year tracking.
   """
-  use TypedStruct
+  use Ecto.Schema
+  import Ecto.Changeset
 
-  @typedoc """
-  Season types in the game world.
-  Seasons cycle through: spring -> summer -> fall -> winter -> spring
+  @season_types [:spring, :summer, :fall, :winter]
+
+  @type t :: %__MODULE__{
+          current: atom(),
+          ticks_elapsed: integer(),
+          year: integer()
+        }
+
+  @primary_key false
+  embedded_schema do
+    field :current, Ecto.Enum, values: @season_types, default: :spring
+    field :ticks_elapsed, :integer, default: 0
+    field :year, :integer, default: 1
+  end
+
+  @doc """
+  Validates season attributes.
   """
-  @type season_type :: :spring | :summer | :fall | :winter
-
-  typedstruct do
-    field :current, season_type(), default: :spring
-    field :ticks_elapsed, integer(), default: 0
-    field :year, integer(), default: 1
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
+  def changeset(season, attrs) do
+    season
+    |> cast(attrs, [:current, :ticks_elapsed, :year])
+    |> validate_required([:current, :year])
+    |> validate_number(:ticks_elapsed, greater_than_or_equal_to: 0)
+    |> validate_number(:year, greater_than: 0)
   end
 end

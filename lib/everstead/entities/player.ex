@@ -1,16 +1,32 @@
 defmodule EverStead.Entities.Player do
   @moduledoc """
-  Represents a player in the game.
-
-  Players own a kingdom which contains their villagers, buildings, and resources.
+  Player entity with kingdom ownership.
   """
-  use TypedStruct
+  use Ecto.Schema
+  import Ecto.Changeset
 
   alias EverStead.Entities.World.Kingdom
 
-  typedstruct do
-    field :id, String.t()
-    field :name, String.t()
-    field :kingdom, Kingdom.t()
+  @type t :: %__MODULE__{
+          id: binary(),
+          name: String.t(),
+          kingdom: EverStead.Entities.World.Kingdom.t() | nil
+        }
+
+  @primary_key {:id, :binary_id, autogenerate: true}
+  embedded_schema do
+    field :name, :string
+    embeds_one :kingdom, Kingdom
+  end
+
+  @doc """
+  Validates player attributes.
+  """
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
+  def changeset(player, attrs) do
+    player
+    |> cast(attrs, [:name])
+    |> cast_embed(:kingdom)
+    |> validate_required([:name])
   end
 end

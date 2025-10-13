@@ -1,28 +1,33 @@
 defmodule EverStead.Entities.World.Resource do
   @moduledoc """
-  Represents a resource in the game world.
-
-  Resources can exist on tiles or be stored in inventories.
-  The location field is optional and only used when the resource
-  is placed directly on the world map.
+  Resource entity with type, amount, and optional location.
   """
-  use TypedStruct
+  use Ecto.Schema
+  import Ecto.Changeset
 
-  alias EverStead.Entities.World.Tile
+  @resource_types [:wood, :stone, :food]
 
-  @typedoc """
-  Resource types available in the game.
+  @type t :: %__MODULE__{
+          type: atom(),
+          amount: integer(),
+          location: map() | nil
+        }
+
+  @primary_key false
+  embedded_schema do
+    field :type, Ecto.Enum, values: @resource_types
+    field :amount, :integer, default: 0
+    field :location, :map
+  end
+
+  @doc """
+  Validates resource attributes.
   """
-  @type resource_type :: :wood | :stone | :food
-
-  @typedoc """
-  Resource inventory mapping resource types to amounts.
-  """
-  @type resource_inventory :: %{optional(resource_type()) => integer()}
-
-  typedstruct do
-    field :type, resource_type()
-    field :amount, integer(), default: 0
-    field :location, Tile.coordinate() | nil, default: nil
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
+  def changeset(resource, attrs) do
+    resource
+    |> cast(attrs, [:type, :amount, :location])
+    |> validate_required([:type])
+    |> validate_number(:amount, greater_than_or_equal_to: 0)
   end
 end

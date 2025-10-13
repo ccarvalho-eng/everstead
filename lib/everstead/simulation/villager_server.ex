@@ -14,10 +14,12 @@ defmodule EverStead.Simulation.VillagerServer do
   use GenServer
   require Logger
 
-  alias EverStead.Constants
   alias EverStead.Entities.World.Kingdom.Villager
   alias EverStead.Entities.World.Kingdom.Job
   alias EverStead.World
+
+  @gathering_rates %{wood: 5, stone: 3, food: 8}
+  @movement_speed 1
 
   @type init_arg :: {String.t(), String.t(), String.t()}
 
@@ -176,7 +178,7 @@ defmodule EverStead.Simulation.VillagerServer do
   defp process_gathering(state) do
     job = state.current_job
     resource_type = job.target.type
-    base_rate = Constants.gathering_rate(resource_type)
+    base_rate = Map.get(@gathering_rates, resource_type, 5)
 
     # Apply seasonal multipliers (you can get season from WorldServer in real implementation)
     # For now, using base rate
@@ -194,11 +196,11 @@ defmodule EverStead.Simulation.VillagerServer do
     %{state | villager: updated_villager}
   end
 
-  @spec process_gathering_with_season(map(), Constants.season_type()) :: map()
+  @spec process_gathering_with_season(map(), atom()) :: map()
   def process_gathering_with_season(state, season) do
     job = state.current_job
     resource_type = job.target.type
-    base_rate = Constants.gathering_rate(resource_type)
+    base_rate = Map.get(@gathering_rates, resource_type, 5)
 
     # Apply seasonal multiplier
     multiplier =
@@ -266,7 +268,7 @@ defmodule EverStead.Simulation.VillagerServer do
 
   @spec move_towards({integer(), integer()}, {integer(), integer()}) :: {integer(), integer()}
   defp move_towards({x1, y1}, {x2, y2}) do
-    speed = Constants.movement_speed()
+    speed = @movement_speed
     dx = clamp(x2 - x1, -speed, speed)
     dy = clamp(y2 - y1, -speed, speed)
     {x1 + dx, y1 + dy}
@@ -287,9 +289,9 @@ defmodule EverStead.Simulation.VillagerServer do
       iex> VillagerServer.get_gathering_rate(:wood)
       5
   """
-  @spec get_gathering_rate(Constants.resource_type()) :: integer()
+  @spec get_gathering_rate(atom()) :: integer()
   def get_gathering_rate(resource_type) do
-    Constants.gathering_rate(resource_type)
+    Map.get(@gathering_rates, resource_type, 5)
   end
 
   @doc """
@@ -301,5 +303,5 @@ defmodule EverStead.Simulation.VillagerServer do
       1
   """
   @spec get_movement_speed() :: integer()
-  def get_movement_speed, do: Constants.movement_speed()
+  def get_movement_speed, do: @movement_speed
 end

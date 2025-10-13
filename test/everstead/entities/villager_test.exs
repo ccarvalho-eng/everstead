@@ -9,7 +9,7 @@ defmodule EverStead.Entities.VillagerTest do
       name: "John",
       state: :working,
       profession: :builder,
-      location: {3, 4},
+      location: %{x: 3, y: 4},
       inventory: %{wood: 10}
     }
 
@@ -19,7 +19,7 @@ defmodule EverStead.Entities.VillagerTest do
     assert villager.name == "John"
     assert villager.state == :working
     assert villager.profession == :builder
-    assert villager.location == {3, 4}
+    assert villager.location == %{x: 3, y: 4}
     assert villager.inventory == %{wood: 10}
   end
 
@@ -35,7 +35,7 @@ defmodule EverStead.Entities.VillagerTest do
     assert villager.name == "Jane"
     assert villager.state == :idle
     assert villager.profession == nil
-    assert villager.location == {0, 0}
+    assert villager.location == %{x: 0, y: 0}
     assert villager.inventory == %{}
   end
 end

@@ -1,24 +1,40 @@
 defmodule EverStead.Entities.World.Kingdom.Job do
   @moduledoc """
-  Represents a task that can be assigned to a villager.
-
-  Jobs are tasks like building structures, gathering resources,
-  or moving items. They track progress and which villager is assigned.
+  Job entity with type, target, and assigned villager.
   """
-  use TypedStruct
+  use Ecto.Schema
+  import Ecto.Changeset
 
-  alias EverStead.Entities.World.{Resource, Tile}
-  alias EverStead.Entities.World.Kingdom.Building
+  @job_types [:build, :gather, :move]
+  @job_statuses [:pending, :in_progress, :done]
 
-  @type type :: :build | :gather | :move
-  @type status :: :pending | :in_progress | :done
-  @type target :: Tile.t() | Building.t() | Resource.t()
+  @type t :: %__MODULE__{
+          id: binary(),
+          type: atom(),
+          status: atom(),
+          target: map(),
+          assigned_villager_id: String.t() | nil
+        }
 
-  typedstruct do
-    field :id, String.t()
-    field :type, type()
-    field :target, target()
-    field :assigned_villager_id, String.t() | nil, default: nil
-    field :status, status(), default: :pending
+  @primary_key {:id, :binary_id, autogenerate: true}
+  embedded_schema do
+    field :type, Ecto.Enum, values: @job_types
+
+    field :status, Ecto.Enum,
+      values: @job_statuses,
+      default: :pending
+
+    field :target, :map
+    field :assigned_villager_id, :string
+  end
+
+  @doc """
+  Validates job attributes.
+  """
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
+  def changeset(job, attrs) do
+    job
+    |> cast(attrs, [:type, :status, :target, :assigned_villager_id])
+    |> validate_required([:type, :target])
   end
 end

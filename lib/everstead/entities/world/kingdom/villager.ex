@@ -1,28 +1,38 @@
 defmodule EverStead.Entities.World.Kingdom.Villager do
   @moduledoc """
-  Represents a villager in the game.
-
-  Villagers can be assigned professions and perform tasks
-  like gathering resources, building structures, and farming.
+  Villager entity with profession, state, and location.
   """
-  use TypedStruct
+  use Ecto.Schema
+  import Ecto.Changeset
 
-  alias EverStead.Entities.World.Resource
-  alias EverStead.Entities.World.Tile
+  @villager_states [:idle, :working, :moving, :resting]
+  @profession_types [:builder, :farmer, :miner]
 
-  @typedoc """
-  Villager profession types.
+  @type t :: %__MODULE__{
+          id: binary(),
+          name: String.t(),
+          state: atom(),
+          profession: atom() | nil,
+          location: map(),
+          inventory: map()
+        }
+
+  @primary_key {:id, :binary_id, autogenerate: true}
+  embedded_schema do
+    field :name, :string
+    field :state, Ecto.Enum, values: @villager_states, default: :idle
+    field :profession, Ecto.Enum, values: @profession_types
+    field :location, :map, default: %{x: 0, y: 0}
+    field :inventory, :map, default: %{}
+  end
+
+  @doc """
+  Validates villager attributes.
   """
-  @type profession_type :: :builder | :farmer | :miner
-
-  @type state :: :idle | :working | :moving | :resting
-
-  typedstruct do
-    field :id, String.t()
-    field :name, String.t()
-    field :state, state(), default: :idle
-    field :profession, profession_type() | nil, default: nil
-    field :location, Tile.coordinate(), default: {0, 0}
-    field :inventory, Resource.resource_inventory(), default: %{}
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
+  def changeset(villager, attrs) do
+    villager
+    |> cast(attrs, [:name, :state, :profession, :location, :inventory])
+    |> validate_required([:name])
   end
 end

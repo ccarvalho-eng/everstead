@@ -5,10 +5,12 @@ defmodule EverStead.World do
   Handles season progression, multipliers, and other world mechanics.
   """
 
-  alias EverStead.Constants
   alias EverStead.Entities.World.Season
 
-  @season_duration Constants.season_duration()
+  @season_duration 60
+  @resource_multipliers %{spring: 1.0, summer: 1.2, fall: 1.1, winter: 0.7}
+  @farming_multipliers %{spring: 1.3, summer: 1.5, fall: 1.2, winter: 0.3}
+  @construction_multipliers %{spring: 1.1, summer: 1.2, fall: 1.0, winter: 0.6}
 
   @doc """
   Returns the duration of a season in ticks.
@@ -32,7 +34,7 @@ defmodule EverStead.World do
       iex> World.next_season(:winter)
       :spring
   """
-  @spec next_season(Season.season_type()) :: Season.season_type()
+  @spec next_season(atom()) :: atom()
   def next_season(:spring), do: :summer
   def next_season(:summer), do: :fall
   def next_season(:fall), do: :winter
@@ -78,8 +80,8 @@ defmodule EverStead.World do
       iex> World.resource_multiplier(:winter)
       0.7
   """
-  @spec resource_multiplier(Season.season_type()) :: float()
-  def resource_multiplier(season), do: Constants.resource_multiplier(season)
+  @spec resource_multiplier(atom()) :: float()
+  def resource_multiplier(season), do: Map.get(@resource_multipliers, season, 1.0)
 
   @doc """
   Returns a float multiplier for farming based on season.
@@ -92,8 +94,8 @@ defmodule EverStead.World do
       iex> World.farming_multiplier(:winter)
       0.3
   """
-  @spec farming_multiplier(Season.season_type()) :: float()
-  def farming_multiplier(season), do: Constants.farming_multiplier(season)
+  @spec farming_multiplier(atom()) :: float()
+  def farming_multiplier(season), do: Map.get(@farming_multipliers, season, 1.0)
 
   @doc """
   Returns a float multiplier for construction speed based on season.
@@ -106,8 +108,8 @@ defmodule EverStead.World do
       iex> World.construction_multiplier(:winter)
       0.6
   """
-  @spec construction_multiplier(Season.season_type()) :: float()
-  def construction_multiplier(season), do: Constants.construction_multiplier(season)
+  @spec construction_multiplier(atom()) :: float()
+  def construction_multiplier(season), do: Map.get(@construction_multipliers, season, 1.0)
 
   @doc """
   Returns the season as a human-readable string.
@@ -117,7 +119,7 @@ defmodule EverStead.World do
       iex> World.season_to_string(:spring)
       "Spring"
   """
-  @spec season_to_string(Season.season_type()) :: String.t()
+  @spec season_to_string(atom()) :: String.t()
   def season_to_string(season) do
     season
     |> Atom.to_string()
