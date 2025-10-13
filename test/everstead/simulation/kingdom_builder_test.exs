@@ -10,10 +10,9 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
   defp create_player(resources) do
     kingdom = %Kingdom{
       id: "k1",
-      player_id: "p1",
       name: "Test Kingdom",
-      villagers: %{},
-      buildings: %{},
+      villagers: [],
+      buildings: [],
       resources: resources
     }
 
@@ -44,7 +43,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       assert updated_player.kingdom.resources.food == 10
 
       # Verify building was added to player's kingdom
-      assert Map.has_key?(updated_player.kingdom.buildings, building.id)
+      assert Enum.any?(updated_player.kingdom.buildings, fn b -> b.id == building.id end)
     end
 
     test "fails when resources are insufficient" do
@@ -280,10 +279,9 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
     test "refunds 50% of resources when construction is less than 50% complete" do
       kingdom = %Kingdom{
         id: "k1",
-        player_id: "p1",
         name: "Test Kingdom",
         resources: %{wood: 10, stone: 5, food: 0},
-        buildings: %{"b1" => %Building{id: "b1", type: :house}}
+        buildings: [%Building{id: "b1", type: :house, location: %{}, construction_progress: 0}]
       }
 
       player = %Player{id: "p1", name: "Test Player", kingdom: kingdom}
@@ -303,16 +301,15 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       assert updated_player.kingdom.resources.food == 0
 
       # Building should be removed from player's kingdom
-      refute Map.has_key?(updated_player.kingdom.buildings, "b1")
+      refute Enum.any?(updated_player.kingdom.buildings, fn b -> b.id == "b1" end)
     end
 
     test "refunds nothing when construction is 50% or more complete" do
       kingdom = %Kingdom{
         id: "k1",
-        player_id: "p1",
         name: "Test Kingdom",
         resources: %{wood: 10, stone: 5, food: 0},
-        buildings: %{"b1" => %Building{id: "b1", type: :house}}
+        buildings: [%Building{id: "b1", type: :house, location: %{}, construction_progress: 0}]
       }
 
       player = %Player{id: "p1", name: "Test Player", kingdom: kingdom}
@@ -330,7 +327,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       assert updated_player.kingdom.resources.stone == 5
 
       # Building should still be removed
-      refute Map.has_key?(updated_player.kingdom.buildings, "b1")
+      refute Enum.any?(updated_player.kingdom.buildings, fn b -> b.id == "b1" end)
     end
   end
 

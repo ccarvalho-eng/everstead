@@ -1,24 +1,36 @@
 defmodule EverStead.Entities.World.Tile do
   @moduledoc """
-  Represents a tile on the world map.
-
-  Each tile has a terrain type and can optionally contain a resource
-  or have a building placed on it.
+  Tile entity with terrain, resources, and buildings.
   """
-  use TypedStruct
+  use Ecto.Schema
+  import Ecto.Changeset
 
   alias EverStead.Entities.World.Resource
 
-  @typedoc """
-  Coordinate tuple representing a position on the world map.
+  @terrain_types [:grass, :forest, :water, :mountain]
+
+  @type t :: %__MODULE__{
+          terrain: atom(),
+          resource: Resource.t() | nil,
+          building_id: String.t() | nil
+        }
+
+  @primary_key false
+  embedded_schema do
+    field :terrain, Ecto.Enum, values: @terrain_types, default: :grass
+    field :building_id, :string
+
+    embeds_one :resource, Resource
+  end
+
+  @doc """
+  Validates tile attributes.
   """
-  @type coordinate :: {integer(), integer()}
-
-  @type terrain :: :grass | :forest | :water | :mountain
-
-  typedstruct do
-    field :terrain, terrain(), default: :grass
-    field :resource, Resource.t() | nil, default: nil
-    field :building_id, String.t() | nil, default: nil
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
+  def changeset(tile, attrs) do
+    tile
+    |> cast(attrs, [:terrain, :building_id])
+    |> cast_embed(:resource)
+    |> validate_required([:terrain])
   end
 end

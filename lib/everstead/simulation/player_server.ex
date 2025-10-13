@@ -46,10 +46,9 @@ defmodule EverStead.Simulation.PlayerServer do
   def init({id, name}) do
     kingdom = %Kingdom{
       id: "kingdom_#{id}",
-      player_id: id,
       name: "#{name}'s Kingdom",
-      villagers: %{},
-      buildings: %{},
+      villagers: [],
+      buildings: [],
       resources: %{wood: 0, stone: 0, food: 0}
     }
 

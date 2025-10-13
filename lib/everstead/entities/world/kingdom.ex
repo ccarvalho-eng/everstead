@@ -1,21 +1,38 @@
 defmodule EverStead.Entities.World.Kingdom do
   @moduledoc """
-  Represents a player's kingdom.
-
-  A kingdom is a player's domain within the world, containing their
-  villagers, buildings, resources, and territory.
+  Kingdom entity with villagers, buildings, and resources.
   """
-  use TypedStruct
+  use Ecto.Schema
+  import Ecto.Changeset
 
-  alias EverStead.Constants
   alias EverStead.Entities.World.Kingdom.{Building, Villager}
 
-  typedstruct do
-    field :id, String.t()
-    field :player_id, String.t()
-    field :name, String.t()
-    field :villagers, %{String.t() => Villager.t()}, default: %{}
-    field :buildings, %{String.t() => Building.t()}, default: %{}
-    field :resources, Constants.resource_inventory(), default: %{wood: 0, stone: 0, food: 0}
+  @type t :: %__MODULE__{
+          id: binary(),
+          name: String.t(),
+          villagers: [Villager.t()],
+          buildings: [Building.t()],
+          resources: map()
+        }
+
+  @primary_key {:id, :binary_id, autogenerate: true}
+  embedded_schema do
+    field :name, :string
+    field :resources, :map, default: %{wood: 0, stone: 0, food: 0}
+
+    embeds_many :villagers, Villager
+    embeds_many :buildings, Building
+  end
+
+  @doc """
+  Validates kingdom attributes.
+  """
+  @spec changeset(t(), map()) :: Ecto.Changeset.t()
+  def changeset(kingdom, attrs) do
+    kingdom
+    |> cast(attrs, [:name, :resources])
+    |> cast_embed(:villagers)
+    |> cast_embed(:buildings)
+    |> validate_required([:name])
   end
 end

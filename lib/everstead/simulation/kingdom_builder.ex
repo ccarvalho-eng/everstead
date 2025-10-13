@@ -6,11 +6,24 @@ defmodule EverStead.Simulation.KingdomBuilder do
   - Construction progress tracking
   """
 
-  alias EverStead.Constants
   alias EverStead.Entities.Player
   alias EverStead.Entities.World.Kingdom.Building
   alias EverStead.Entities.World.Tile
   alias EverStead.World
+
+  @building_costs %{
+    house: %{wood: 50, stone: 20, food: 0},
+    farm: %{wood: 30, stone: 10, food: 0},
+    lumberyard: %{wood: 40, stone: 30, food: 0},
+    storage: %{wood: 60, stone: 40, food: 0}
+  }
+
+  @construction_rates %{
+    house: 10,
+    farm: 8,
+    lumberyard: 12,
+    storage: 15
+  }
 
   @type build_result :: {:ok, {Player.t(), Building.t()}} | {:error, atom()}
   @type validation_result :: :ok | {:error, atom()}
@@ -60,7 +73,7 @@ defmodule EverStead.Simulation.KingdomBuilder do
   """
   @spec advance_construction(Building.t(), integer()) :: Building.t()
   def advance_construction(building, ticks \\ 1) do
-    rate = Constants.construction_rate(building.type)
+    rate = Map.get(@construction_rates, building.type, 10)
     new_progress = min(building.construction_progress + rate * ticks, 100)
     %{building | construction_progress: new_progress}
   end
@@ -84,10 +97,10 @@ defmodule EverStead.Simulation.KingdomBuilder do
       iex> KingdomBuilder.advance_construction_with_season(building, :winter, 1)
       %Building{id: "b1", type: :house, construction_progress: 6}
   """
-  @spec advance_construction_with_season(Building.t(), Constants.season_type(), integer()) ::
+  @spec advance_construction_with_season(Building.t(), atom(), integer()) ::
           Building.t()
   def advance_construction_with_season(building, season, ticks \\ 1) do
-    base_rate = Constants.construction_rate(building.type)
+    base_rate = Map.get(@construction_rates, building.type, 10)
     season_multiplier = World.construction_multiplier(season)
     effective_rate = floor(base_rate * season_multiplier)
     new_progress = min(building.construction_progress + effective_rate * ticks, 100)
@@ -155,17 +168,17 @@ defmodule EverStead.Simulation.KingdomBuilder do
       iex> KingdomBuilder.get_building_cost(:house)
       %{wood: 50, stone: 20, food: 0}
   """
-  @spec get_building_cost(Building.type()) :: Constants.resource_inventory()
+  @spec get_building_cost(atom()) :: map()
   def get_building_cost(building_type) do
-    Constants.building_cost(building_type)
+    Map.get(@building_costs, building_type, %{wood: 0, stone: 0, food: 0})
   end
 
   @doc """
   Gets the construction rate (progress per tick) for a building type.
   """
-  @spec get_construction_rate(Building.type()) :: integer()
+  @spec get_construction_rate(atom()) :: integer()
   def get_construction_rate(building_type) do
-    Constants.construction_rate(building_type)
+    Map.get(@construction_rates, building_type, 10)
   end
 
   # Private Functions
@@ -185,7 +198,7 @@ defmodule EverStead.Simulation.KingdomBuilder do
 
   @spec validate_resources(Player.t(), Building.type()) :: validation_result()
   defp validate_resources(player, building_type) do
-    cost = Constants.building_cost(building_type)
+    cost = Map.get(@building_costs, building_type, %{wood: 0, stone: 0, food: 0})
 
     has_resources? =
       Enum.all?(cost, fn {resource, amount} ->
@@ -208,7 +221,7 @@ defmodule EverStead.Simulation.KingdomBuilder do
 
   @spec deduct_resources(Player.t(), Building.type()) :: Player.t()
   defp deduct_resources(player, building_type) do
-    cost = Constants.building_cost(building_type)
+    cost = Map.get(@building_costs, building_type, %{wood: 0, stone: 0, food: 0})
 
     updated_resources =
       Enum.reduce(cost, player.kingdom.resources, fn {resource, amount}, acc ->
@@ -221,7 +234,7 @@ defmodule EverStead.Simulation.KingdomBuilder do
 
   @spec refund_resources(Player.t(), Building.type(), float()) :: Player.t()
   defp refund_resources(player, building_type, percentage) do
-    cost = Constants.building_cost(building_type)
+    cost = Map.get(@building_costs, building_type, %{wood: 0, stone: 0, food: 0})
 
     updated_resources =
       Enum.reduce(cost, player.kingdom.resources, fn {resource, amount}, acc ->
@@ -235,14 +248,14 @@ defmodule EverStead.Simulation.KingdomBuilder do
 
   @spec add_building_to_player(Player.t(), Building.t()) :: Player.t()
   defp add_building_to_player(player, building) do
-    updated_buildings = Map.put(player.kingdom.buildings, building.id, building)
+    updated_buildings = [building | player.kingdom.buildings]
     updated_kingdom = %{player.kingdom | buildings: updated_buildings}
     %{player | kingdom: updated_kingdom}
   end
 
   @spec remove_building_from_player(Player.t(), String.t()) :: Player.t()
   defp remove_building_from_player(player, building_id) do
-    updated_buildings = Map.delete(player.kingdom.buildings, building_id)
+    updated_buildings = Enum.reject(player.kingdom.buildings, fn b -> b.id == building_id end)
     updated_kingdom = %{player.kingdom | buildings: updated_buildings}
     %{player | kingdom: updated_kingdom}
   end
