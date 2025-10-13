@@ -1,4 +1,4 @@
-defmodule EverStead.Simulation.PlayerServer do
+defmodule EverStead.Simulation.Player.Server do
   @moduledoc """
   GenServer managing individual player state and game logic.
 
@@ -69,7 +69,7 @@ defmodule EverStead.Simulation.PlayerServer do
   @impl true
   def handle_info(:tick, player) do
     # Tell JobManager to assign jobs to idle villagers
-    EverStead.Simulation.JobManager.assign_jobs(player.kingdom.villagers)
+    EverStead.Simulation.Kingdom.JobManager.assign_jobs(player.kingdom.villagers)
     {:noreply, player}
   end
 end

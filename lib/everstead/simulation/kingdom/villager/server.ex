@@ -1,4 +1,4 @@
-defmodule EverStead.Simulation.VillagerServer do
+defmodule EverStead.Simulation.Kingdom.Villager.Server do
   @moduledoc """
   GenServer managing individual villager behavior and job execution.
 

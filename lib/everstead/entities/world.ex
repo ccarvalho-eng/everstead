@@ -21,6 +21,7 @@ defmodule EverStead.Entities.World do
     field :height, :integer
     field :tiles, :map, default: %{}
     field :day, :integer, default: 0
+
     embeds_one :season, Season
   end
 

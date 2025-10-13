@@ -1,7 +1,7 @@
-defmodule EverStead.Simulation.KingdomBuilderTest do
+defmodule EverStead.Simulation.Kingdom.BuilderTest do
   use ExUnit.Case, async: true
 
-  alias EverStead.Simulation.KingdomBuilder
+  alias EverStead.Simulation.Kingdom.Builder
   alias EverStead.Entities.Player
   alias EverStead.Entities.World.Kingdom
   alias EverStead.Entities.World.Kingdom.Building
@@ -29,7 +29,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       tile = %Tile{terrain: :grass, building_id: nil}
 
       assert {:ok, {updated_player, building}} =
-               KingdomBuilder.place_building(player, tile, :house, {5, 5})
+               Builder.place_building(player, tile, :house, {5, 5})
 
       assert building.type == :house
       assert building.location == {5, 5}
@@ -51,7 +51,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       tile = %Tile{terrain: :grass, building_id: nil}
 
       assert {:error, :insufficient_resources} =
-               KingdomBuilder.place_building(player, tile, :house, {5, 5})
+               Builder.place_building(player, tile, :house, {5, 5})
     end
 
     test "fails when terrain is water" do
@@ -59,7 +59,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       tile = %Tile{terrain: :water, building_id: nil}
 
       assert {:error, :invalid_terrain} =
-               KingdomBuilder.place_building(player, tile, :house, {5, 5})
+               Builder.place_building(player, tile, :house, {5, 5})
     end
 
     test "fails when terrain is mountain" do
@@ -67,7 +67,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       tile = %Tile{terrain: :mountain, building_id: nil}
 
       assert {:error, :invalid_terrain} =
-               KingdomBuilder.place_building(player, tile, :house, {5, 5})
+               Builder.place_building(player, tile, :house, {5, 5})
     end
 
     test "fails when tile is occupied" do
@@ -75,7 +75,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       tile = %Tile{terrain: :grass, building_id: "existing_building"}
 
       assert {:error, :tile_occupied} =
-               KingdomBuilder.place_building(player, tile, :house, {5, 5})
+               Builder.place_building(player, tile, :house, {5, 5})
     end
 
     test "successfully places different building types" do
@@ -84,7 +84,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
 
       # Test farm
       assert {:ok, {updated_player, farm}} =
-               KingdomBuilder.place_building(player, tile, :farm, {1, 1})
+               Builder.place_building(player, tile, :farm, {1, 1})
 
       assert farm.type == :farm
       assert updated_player.kingdom.resources.wood == 170
@@ -92,7 +92,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
 
       # Test lumberyard
       assert {:ok, {updated_player2, lumberyard}} =
-               KingdomBuilder.place_building(updated_player, tile, :lumberyard, {2, 2})
+               Builder.place_building(updated_player, tile, :lumberyard, {2, 2})
 
       assert lumberyard.type == :lumberyard
       assert updated_player2.kingdom.resources.wood == 130
@@ -100,7 +100,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
 
       # Test storage
       assert {:ok, {updated_player3, storage}} =
-               KingdomBuilder.place_building(updated_player2, tile, :storage, {3, 3})
+               Builder.place_building(updated_player2, tile, :storage, {3, 3})
 
       assert storage.type == :storage
       assert updated_player3.kingdom.resources.wood == 70
@@ -118,10 +118,10 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       }
 
       # House has construction rate of 10
-      updated = KingdomBuilder.advance_construction(building)
+      updated = Builder.advance_construction(building)
       assert updated.construction_progress == 10
 
-      updated2 = KingdomBuilder.advance_construction(updated)
+      updated2 = Builder.advance_construction(updated)
       assert updated2.construction_progress == 20
     end
 
@@ -133,7 +133,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
         construction_progress: 0
       }
 
-      updated = KingdomBuilder.advance_construction(building, 5)
+      updated = Builder.advance_construction(building, 5)
       assert updated.construction_progress == 50
     end
 
@@ -145,11 +145,11 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
         construction_progress: 95
       }
 
-      updated = KingdomBuilder.advance_construction(building)
+      updated = Builder.advance_construction(building)
       assert updated.construction_progress == 100
 
       # Advancing again should stay at 100
-      updated2 = KingdomBuilder.advance_construction(updated)
+      updated2 = Builder.advance_construction(updated)
       assert updated2.construction_progress == 100
     end
 
@@ -159,10 +159,10 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       lumberyard = %Building{id: "b3", type: :lumberyard, construction_progress: 0}
       storage = %Building{id: "b4", type: :storage, construction_progress: 0}
 
-      assert KingdomBuilder.advance_construction(house).construction_progress == 10
-      assert KingdomBuilder.advance_construction(farm).construction_progress == 8
-      assert KingdomBuilder.advance_construction(lumberyard).construction_progress == 12
-      assert KingdomBuilder.advance_construction(storage).construction_progress == 15
+      assert Builder.advance_construction(house).construction_progress == 10
+      assert Builder.advance_construction(farm).construction_progress == 8
+      assert Builder.advance_construction(lumberyard).construction_progress == 12
+      assert Builder.advance_construction(storage).construction_progress == 15
     end
   end
 
@@ -175,7 +175,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       }
 
       # House base rate: 10, Summer multiplier: 1.2, Result: floor(10 * 1.2) = 12
-      updated = KingdomBuilder.advance_construction_with_season(building, :summer, 1)
+      updated = Builder.advance_construction_with_season(building, :summer, 1)
       assert updated.construction_progress == 12
     end
 
@@ -187,7 +187,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       }
 
       # House base rate: 10, Spring multiplier: 1.1, Result: floor(10 * 1.1) = 11
-      updated = KingdomBuilder.advance_construction_with_season(building, :spring, 1)
+      updated = Builder.advance_construction_with_season(building, :spring, 1)
       assert updated.construction_progress == 11
     end
 
@@ -199,7 +199,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       }
 
       # House base rate: 10, Fall multiplier: 1.0, Result: 10
-      updated = KingdomBuilder.advance_construction_with_season(building, :fall, 1)
+      updated = Builder.advance_construction_with_season(building, :fall, 1)
       assert updated.construction_progress == 10
     end
 
@@ -211,7 +211,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       }
 
       # House base rate: 10, Winter multiplier: 0.6, Result: floor(10 * 0.6) = 6
-      updated = KingdomBuilder.advance_construction_with_season(building, :winter, 1)
+      updated = Builder.advance_construction_with_season(building, :winter, 1)
       assert updated.construction_progress == 6
     end
 
@@ -223,7 +223,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       }
 
       # House base rate: 10, Summer multiplier: 1.2, Result: floor(10 * 1.2) * 5 = 60
-      updated = KingdomBuilder.advance_construction_with_season(building, :summer, 5)
+      updated = Builder.advance_construction_with_season(building, :summer, 5)
       assert updated.construction_progress == 60
     end
 
@@ -235,7 +235,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       }
 
       # Would be 95 + 12 = 107, but caps at 100
-      updated = KingdomBuilder.advance_construction_with_season(building, :summer, 1)
+      updated = Builder.advance_construction_with_season(building, :summer, 1)
       assert updated.construction_progress == 100
     end
 
@@ -243,19 +243,19 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
       # Farm base rate: 8
       farm = %Building{id: "b1", type: :farm, construction_progress: 0}
       # 8 * 1.2 = 9.6, floor = 9
-      assert KingdomBuilder.advance_construction_with_season(farm, :summer).construction_progress ==
+      assert Builder.advance_construction_with_season(farm, :summer).construction_progress ==
                9
 
       # Lumberyard base rate: 12
       lumberyard = %Building{id: "b2", type: :lumberyard, construction_progress: 0}
       # 12 * 0.6 = 7.2, floor = 7
-      assert KingdomBuilder.advance_construction_with_season(lumberyard, :winter).construction_progress ==
+      assert Builder.advance_construction_with_season(lumberyard, :winter).construction_progress ==
                7
 
       # Storage base rate: 15
       storage = %Building{id: "b3", type: :storage, construction_progress: 0}
       # 15 * 1.1 = 16.5, floor = 16
-      assert KingdomBuilder.advance_construction_with_season(storage, :spring).construction_progress ==
+      assert Builder.advance_construction_with_season(storage, :spring).construction_progress ==
                16
     end
   end
@@ -263,15 +263,15 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
   describe "construction_complete?/1" do
     test "returns true when construction is 100%" do
       building = %Building{construction_progress: 100}
-      assert KingdomBuilder.construction_complete?(building) == true
+      assert Builder.construction_complete?(building) == true
     end
 
     test "returns false when construction is less than 100%" do
       building = %Building{construction_progress: 99}
-      assert KingdomBuilder.construction_complete?(building) == false
+      assert Builder.construction_complete?(building) == false
 
       building2 = %Building{construction_progress: 0}
-      assert KingdomBuilder.construction_complete?(building2) == false
+      assert Builder.construction_complete?(building2) == false
     end
   end
 
@@ -292,7 +292,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
         construction_progress: 30
       }
 
-      {:ok, updated_player} = KingdomBuilder.cancel_construction(player, building)
+      {:ok, updated_player} = Builder.cancel_construction(player, building)
 
       # House costs: wood: 50, stone: 20
       # 50% refund: wood: 25, stone: 10
@@ -320,7 +320,7 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
         construction_progress: 50
       }
 
-      {:ok, updated_player} = KingdomBuilder.cancel_construction(player, building)
+      {:ok, updated_player} = Builder.cancel_construction(player, building)
 
       # No refund
       assert updated_player.kingdom.resources.wood == 10
@@ -334,51 +334,51 @@ defmodule EverStead.Simulation.KingdomBuilderTest do
   describe "can_build_at?/2" do
     test "returns :ok when tile is valid" do
       tile = %Tile{terrain: :grass, building_id: nil}
-      assert :ok = KingdomBuilder.can_build_at?(tile, :house)
+      assert :ok = Builder.can_build_at?(tile, :house)
     end
 
     test "returns error when terrain is invalid" do
       water_tile = %Tile{terrain: :water, building_id: nil}
-      assert {:error, :invalid_terrain} = KingdomBuilder.can_build_at?(water_tile, :house)
+      assert {:error, :invalid_terrain} = Builder.can_build_at?(water_tile, :house)
 
       mountain_tile = %Tile{terrain: :mountain, building_id: nil}
-      assert {:error, :invalid_terrain} = KingdomBuilder.can_build_at?(mountain_tile, :house)
+      assert {:error, :invalid_terrain} = Builder.can_build_at?(mountain_tile, :house)
     end
 
     test "returns error when tile is occupied" do
       tile = %Tile{terrain: :grass, building_id: "existing"}
-      assert {:error, :tile_occupied} = KingdomBuilder.can_build_at?(tile, :house)
+      assert {:error, :tile_occupied} = Builder.can_build_at?(tile, :house)
     end
 
     test "returns error for invalid building type" do
       tile = %Tile{terrain: :grass, building_id: nil}
-      assert {:error, :invalid_building_type} = KingdomBuilder.can_build_at?(tile, :castle)
+      assert {:error, :invalid_building_type} = Builder.can_build_at?(tile, :castle)
     end
   end
 
   describe "get_building_cost/1" do
     test "returns correct costs for each building type" do
-      assert KingdomBuilder.get_building_cost(:house) == %{wood: 50, stone: 20, food: 0}
-      assert KingdomBuilder.get_building_cost(:farm) == %{wood: 30, stone: 10, food: 0}
-      assert KingdomBuilder.get_building_cost(:lumberyard) == %{wood: 40, stone: 30, food: 0}
-      assert KingdomBuilder.get_building_cost(:storage) == %{wood: 60, stone: 40, food: 0}
+      assert Builder.get_building_cost(:house) == %{wood: 50, stone: 20, food: 0}
+      assert Builder.get_building_cost(:farm) == %{wood: 30, stone: 10, food: 0}
+      assert Builder.get_building_cost(:lumberyard) == %{wood: 40, stone: 30, food: 0}
+      assert Builder.get_building_cost(:storage) == %{wood: 60, stone: 40, food: 0}
     end
 
     test "returns zero cost for unknown building type" do
-      assert KingdomBuilder.get_building_cost(:unknown) == %{wood: 0, stone: 0, food: 0}
+      assert Builder.get_building_cost(:unknown) == %{wood: 0, stone: 0, food: 0}
     end
   end
 
   describe "get_construction_rate/1" do
     test "returns correct construction rates" do
-      assert KingdomBuilder.get_construction_rate(:house) == 10
-      assert KingdomBuilder.get_construction_rate(:farm) == 8
-      assert KingdomBuilder.get_construction_rate(:lumberyard) == 12
-      assert KingdomBuilder.get_construction_rate(:storage) == 15
+      assert Builder.get_construction_rate(:house) == 10
+      assert Builder.get_construction_rate(:farm) == 8
+      assert Builder.get_construction_rate(:lumberyard) == 12
+      assert Builder.get_construction_rate(:storage) == 15
     end
 
     test "returns default rate for unknown building type" do
-      assert KingdomBuilder.get_construction_rate(:unknown) == 10
+      assert Builder.get_construction_rate(:unknown) == 10
     end
   end
 end

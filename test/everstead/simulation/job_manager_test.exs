@@ -1,14 +1,15 @@
-defmodule EverStead.Simulation.JobManagerTest do
+defmodule EverStead.Simulation.Kingdom.JobManagerTest do
   use ExUnit.Case, async: false
 
-  alias EverStead.Simulation.{JobManager, VillagerServer, VillagerSupervisor}
+  alias EverStead.Simulation.Kingdom.JobManager
+  alias EverStead.Simulation.Kingdom.Villager.{Server, Supervisor}
   alias EverStead.Entities.World.Kingdom.Job
   alias EverStead.Entities.World.Resource
 
   setup do
     # Clean up villagers from previous tests
-    VillagerSupervisor.list_villagers()
-    |> Enum.each(&VillagerSupervisor.stop_villager/1)
+    Supervisor.list_villagers()
+    |> Enum.each(&Supervisor.stop_villager/1)
 
     # Clear all jobs
     JobManager.clear_all_jobs()
@@ -112,7 +113,7 @@ defmodule EverStead.Simulation.JobManagerTest do
   describe "assign_jobs/1" do
     test "assigns job to idle villager" do
       # Start a villager
-      {:ok, _pid} = VillagerSupervisor.start_villager("v1", "Bob", "p1")
+      {:ok, _pid} = Supervisor.start_villager("v1", "Bob", "p1")
       Process.sleep(10)
 
       # Add a job
@@ -127,7 +128,7 @@ defmodule EverStead.Simulation.JobManagerTest do
       Process.sleep(10)
 
       # Get villager state
-      villager = VillagerServer.get_state("v1")
+      villager = Server.get_state("v1")
       villagers = %{"v1" => villager}
 
       # Assign jobs
@@ -141,14 +142,14 @@ defmodule EverStead.Simulation.JobManagerTest do
       assert state.stats.total_assigned == 1
 
       # Check villager received the job
-      villager_state = VillagerServer.get_state("v1")
+      villager_state = Server.get_state("v1")
       assert villager_state.state == :working
     end
 
     test "assigns multiple jobs to multiple idle villagers" do
       # Start two villagers
-      VillagerSupervisor.start_villager("v1", "Alice", "p1")
-      VillagerSupervisor.start_villager("v2", "Bob", "p1")
+      Supervisor.start_villager("v1", "Alice", "p1")
+      Supervisor.start_villager("v2", "Bob", "p1")
       Process.sleep(10)
 
       # Add two jobs
@@ -160,8 +161,8 @@ defmodule EverStead.Simulation.JobManagerTest do
       Process.sleep(10)
 
       # Get villager states
-      v1 = VillagerServer.get_state("v1")
-      v2 = VillagerServer.get_state("v2")
+      v1 = Server.get_state("v1")
+      v2 = Server.get_state("v2")
       villagers = %{"v1" => v1, "v2" => v2}
 
       # Assign jobs
@@ -177,7 +178,7 @@ defmodule EverStead.Simulation.JobManagerTest do
 
     test "does not assign to working villagers" do
       # Start a villager
-      VillagerSupervisor.start_villager("v1", "Charlie", "p1")
+      Supervisor.start_villager("v1", "Charlie", "p1")
       Process.sleep(10)
 
       # Assign a job directly
@@ -187,7 +188,7 @@ defmodule EverStead.Simulation.JobManagerTest do
         target: %Resource{type: :wood, location: {1, 1}}
       }
 
-      VillagerServer.assign_job("v1", existing_job)
+      Server.assign_job("v1", existing_job)
       Process.sleep(10)
 
       # Add another job to queue
@@ -196,7 +197,7 @@ defmodule EverStead.Simulation.JobManagerTest do
       Process.sleep(10)
 
       # Get villager state (should be working)
-      villager = VillagerServer.get_state("v1")
+      villager = Server.get_state("v1")
       assert villager.state == :working
 
       # Try to assign jobs
@@ -211,7 +212,7 @@ defmodule EverStead.Simulation.JobManagerTest do
 
     test "assigns high priority jobs first" do
       # Start villager
-      VillagerSupervisor.start_villager("v1", "Dana", "p1")
+      Supervisor.start_villager("v1", "Dana", "p1")
       Process.sleep(10)
 
       # Add jobs with different priorities
@@ -223,7 +224,7 @@ defmodule EverStead.Simulation.JobManagerTest do
       Process.sleep(10)
 
       # Assign to villager
-      villager = VillagerServer.get_state("v1")
+      villager = Server.get_state("v1")
       JobManager.assign_jobs(%{"v1" => villager})
       Process.sleep(50)
 
@@ -242,14 +243,14 @@ defmodule EverStead.Simulation.JobManagerTest do
   describe "complete_job/2" do
     test "marks job as completed and removes from active jobs" do
       # Start villager and assign job
-      VillagerSupervisor.start_villager("v1", "Eve", "p1")
+      Supervisor.start_villager("v1", "Eve", "p1")
       Process.sleep(10)
 
       job = %Job{id: "j1", type: :gather, target: %Resource{type: :wood, location: {1, 1}}}
       JobManager.add_job(job)
       Process.sleep(10)
 
-      villager = VillagerServer.get_state("v1")
+      villager = Server.get_state("v1")
       JobManager.assign_jobs(%{"v1" => villager})
       Process.sleep(50)
 

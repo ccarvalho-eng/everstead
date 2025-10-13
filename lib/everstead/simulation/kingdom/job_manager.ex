@@ -1,4 +1,4 @@
-defmodule EverStead.Simulation.JobManager do
+defmodule EverStead.Simulation.Kingdom.JobManager do
   @moduledoc """
   Manages job assignment and distribution for villagers.
 
@@ -18,7 +18,7 @@ defmodule EverStead.Simulation.JobManager do
 
   alias EverStead.Entities.World.Kingdom.Job
   alias EverStead.Entities.World.Kingdom.Villager
-  alias EverStead.Simulation.VillagerServer
+  alias EverStead.Simulation.Kingdom.Villager.Server, as: VillagerServer
 
   @type priority :: :critical | :high | :normal | :low
   @type job_with_priority :: {Job.t(), priority()}

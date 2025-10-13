@@ -19,11 +19,7 @@ defmodule EverStead.Entities.World.Kingdom.Job do
   @primary_key {:id, :binary_id, autogenerate: true}
   embedded_schema do
     field :type, Ecto.Enum, values: @job_types
-
-    field :status, Ecto.Enum,
-      values: @job_statuses,
-      default: :pending
-
+    field :status, Ecto.Enum, values: @job_statuses, default: :pending
     field :target, :map
     field :assigned_villager_id, :string
   end

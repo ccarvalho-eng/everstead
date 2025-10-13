@@ -1,4 +1,4 @@
-defmodule EverStead.Simulation.KingdomBuilder do
+defmodule EverStead.Simulation.Kingdom.Builder do
   @moduledoc """
   Handles kingdom building logic including:
   - Building placement and validation

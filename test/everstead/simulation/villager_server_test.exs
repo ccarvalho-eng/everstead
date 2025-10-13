@@ -1,7 +1,7 @@
-defmodule EverStead.Simulation.VillagerServerTest do
+defmodule EverStead.Simulation.Kingdom.Villager.ServerTest do
   use ExUnit.Case, async: false
 
-  alias EverStead.Simulation.{VillagerServer, VillagerSupervisor}
+  alias EverStead.Simulation.Kingdom.Villager.{Server, Supervisor}
   alias EverStead.Entities.World.Kingdom.Villager
   alias EverStead.Entities.World.Kingdom.Job
   alias EverStead.Entities.World.Resource
@@ -9,8 +9,8 @@ defmodule EverStead.Simulation.VillagerServerTest do
   setup do
     # Registry and Supervisor are already started by the application
     # Clean up any existing villagers from previous tests
-    VillagerSupervisor.list_villagers()
-    |> Enum.each(&VillagerSupervisor.stop_villager/1)
+    Supervisor.list_villagers()
+    |> Enum.each(&Supervisor.stop_villager/1)
 
     Process.sleep(50)
 
@@ -19,10 +19,10 @@ defmodule EverStead.Simulation.VillagerServerTest do
 
   describe "start_link/1" do
     test "starts a villager server with valid parameters" do
-      assert {:ok, pid} = VillagerServer.start_link({"v1", "Bob", "p1"})
+      assert {:ok, pid} = Server.start_link({"v1", "Bob", "p1"})
       assert Process.alive?(pid)
 
-      state = VillagerServer.get_state("v1")
+      state = Server.get_state("v1")
       assert state.id == "v1"
       assert state.name == "Bob"
       assert state.state == :idle
@@ -30,7 +30,7 @@ defmodule EverStead.Simulation.VillagerServerTest do
     end
 
     test "registers villager in VillagerRegistry" do
-      {:ok, _pid} = VillagerServer.start_link({"v2", "Alice", "p1"})
+      {:ok, _pid} = Server.start_link({"v2", "Alice", "p1"})
 
       assert [{_pid, _}] = Registry.lookup(EverStead.VillagerRegistry, "v2")
     end
@@ -38,9 +38,9 @@ defmodule EverStead.Simulation.VillagerServerTest do
 
   describe "get_state/1" do
     test "returns the current villager state" do
-      {:ok, _pid} = VillagerServer.start_link({"v3", "Charlie", "p1"})
+      {:ok, _pid} = Server.start_link({"v3", "Charlie", "p1"})
 
-      state = VillagerServer.get_state("v3")
+      state = Server.get_state("v3")
       assert %Villager{} = state
       assert state.id == "v3"
       assert state.name == "Charlie"
@@ -50,7 +50,7 @@ defmodule EverStead.Simulation.VillagerServerTest do
 
   describe "assign_job/2" do
     test "assigns a gathering job to a villager" do
-      {:ok, _pid} = VillagerServer.start_link({"v4", "Dana", "p1"})
+      {:ok, _pid} = Server.start_link({"v4", "Dana", "p1"})
 
       job = %Job{
         id: "j1",
@@ -59,17 +59,17 @@ defmodule EverStead.Simulation.VillagerServerTest do
         status: :pending
       }
 
-      assert :ok = VillagerServer.assign_job("v4", job)
+      assert :ok = Server.assign_job("v4", job)
 
       # Give it a moment to process
       Process.sleep(10)
 
-      state = VillagerServer.get_state("v4")
+      state = Server.get_state("v4")
       assert state.state == :working
     end
 
     test "assigns a building job to a villager" do
-      {:ok, _pid} = VillagerServer.start_link({"v5", "Eve", "p1"})
+      {:ok, _pid} = Server.start_link({"v5", "Eve", "p1"})
 
       job = %Job{
         id: "j2",
@@ -78,15 +78,15 @@ defmodule EverStead.Simulation.VillagerServerTest do
         status: :pending
       }
 
-      assert :ok = VillagerServer.assign_job("v5", job)
+      assert :ok = Server.assign_job("v5", job)
       Process.sleep(10)
 
-      state = VillagerServer.get_state("v5")
+      state = Server.get_state("v5")
       assert state.state == :working
     end
 
     test "assigns a movement job to a villager" do
-      {:ok, _pid} = VillagerServer.start_link({"v6", "Frank", "p1"})
+      {:ok, _pid} = Server.start_link({"v6", "Frank", "p1"})
 
       job = %Job{
         id: "j3",
@@ -95,17 +95,17 @@ defmodule EverStead.Simulation.VillagerServerTest do
         status: :pending
       }
 
-      assert :ok = VillagerServer.assign_job("v6", job)
+      assert :ok = Server.assign_job("v6", job)
       Process.sleep(10)
 
-      state = VillagerServer.get_state("v6")
+      state = Server.get_state("v6")
       assert state.state == :working
     end
   end
 
   describe "cancel_job/1" do
     test "cancels current job and returns villager to idle" do
-      {:ok, _pid} = VillagerServer.start_link({"v7", "Grace", "p1"})
+      {:ok, _pid} = Server.start_link({"v7", "Grace", "p1"})
 
       job = %Job{
         id: "j4",
@@ -114,23 +114,23 @@ defmodule EverStead.Simulation.VillagerServerTest do
         status: :pending
       }
 
-      VillagerServer.assign_job("v7", job)
+      Server.assign_job("v7", job)
       Process.sleep(10)
 
-      state = VillagerServer.get_state("v7")
+      state = Server.get_state("v7")
       assert state.state == :working
 
-      assert :ok = VillagerServer.cancel_job("v7")
+      assert :ok = Server.cancel_job("v7")
       Process.sleep(10)
 
-      state = VillagerServer.get_state("v7")
+      state = Server.get_state("v7")
       assert state.state == :idle
     end
   end
 
   describe "tick processing - gathering" do
     test "villager gathers wood when assigned gathering job" do
-      {:ok, pid} = VillagerServer.start_link({"v8", "Henry", "p1"})
+      {:ok, pid} = Server.start_link({"v8", "Henry", "p1"})
 
       job = %Job{
         id: "j5",
@@ -139,19 +139,19 @@ defmodule EverStead.Simulation.VillagerServerTest do
         status: :in_progress
       }
 
-      VillagerServer.assign_job("v8", job)
+      Server.assign_job("v8", job)
       Process.sleep(10)
 
       # Simulate a tick
       send(pid, :tick)
       Process.sleep(10)
 
-      state = VillagerServer.get_state("v8")
+      state = Server.get_state("v8")
       assert state.inventory[:wood] == 5
     end
 
     test "villager gathers stone when assigned gathering job" do
-      {:ok, pid} = VillagerServer.start_link({"v9", "Ivy", "p1"})
+      {:ok, pid} = Server.start_link({"v9", "Ivy", "p1"})
 
       job = %Job{
         id: "j6",
@@ -160,19 +160,19 @@ defmodule EverStead.Simulation.VillagerServerTest do
         status: :in_progress
       }
 
-      VillagerServer.assign_job("v9", job)
+      Server.assign_job("v9", job)
       Process.sleep(10)
 
       # Simulate a tick
       send(pid, :tick)
       Process.sleep(10)
 
-      state = VillagerServer.get_state("v9")
+      state = Server.get_state("v9")
       assert state.inventory[:stone] == 3
     end
 
     test "villager gathers food when assigned gathering job" do
-      {:ok, pid} = VillagerServer.start_link({"v10", "Jack", "p1"})
+      {:ok, pid} = Server.start_link({"v10", "Jack", "p1"})
 
       job = %Job{
         id: "j7",
@@ -181,19 +181,19 @@ defmodule EverStead.Simulation.VillagerServerTest do
         status: :in_progress
       }
 
-      VillagerServer.assign_job("v10", job)
+      Server.assign_job("v10", job)
       Process.sleep(10)
 
       # Simulate a tick
       send(pid, :tick)
       Process.sleep(10)
 
-      state = VillagerServer.get_state("v10")
+      state = Server.get_state("v10")
       assert state.inventory[:food] == 8
     end
 
     test "villager accumulates resources over multiple ticks" do
-      {:ok, pid} = VillagerServer.start_link({"v11", "Kate", "p1"})
+      {:ok, pid} = Server.start_link({"v11", "Kate", "p1"})
 
       job = %Job{
         id: "j8",
@@ -202,7 +202,7 @@ defmodule EverStead.Simulation.VillagerServerTest do
         status: :in_progress
       }
 
-      VillagerServer.assign_job("v11", job)
+      Server.assign_job("v11", job)
       Process.sleep(10)
 
       # Simulate multiple ticks
@@ -213,14 +213,14 @@ defmodule EverStead.Simulation.VillagerServerTest do
       send(pid, :tick)
       Process.sleep(10)
 
-      state = VillagerServer.get_state("v11")
+      state = Server.get_state("v11")
       assert state.inventory[:wood] == 15
     end
   end
 
   describe "tick processing - movement" do
     test "villager moves towards target location" do
-      {:ok, pid} = VillagerServer.start_link({"v12", "Leo", "p1"})
+      {:ok, pid} = Server.start_link({"v12", "Leo", "p1"})
 
       job = %Job{
         id: "j9",
@@ -229,24 +229,24 @@ defmodule EverStead.Simulation.VillagerServerTest do
         status: :in_progress
       }
 
-      VillagerServer.assign_job("v12", job)
+      Server.assign_job("v12", job)
       Process.sleep(10)
 
-      initial_state = VillagerServer.get_state("v12")
+      initial_state = Server.get_state("v12")
       assert initial_state.location == {0, 0}
 
       # Simulate tick
       send(pid, :tick)
       Process.sleep(10)
 
-      state = VillagerServer.get_state("v12")
+      state = Server.get_state("v12")
       # Should move 1 tile towards target
       assert state.location == {1, 1}
       assert state.state == :moving
     end
 
     test "villager becomes idle when reaching destination" do
-      {:ok, pid} = VillagerServer.start_link({"v13", "Mia", "p1"})
+      {:ok, pid} = Server.start_link({"v13", "Mia", "p1"})
 
       # Set up villager close to destination
       job = %Job{
@@ -256,21 +256,21 @@ defmodule EverStead.Simulation.VillagerServerTest do
         status: :in_progress
       }
 
-      VillagerServer.assign_job("v13", job)
+      Server.assign_job("v13", job)
       Process.sleep(10)
 
       # First tick - move to destination
       send(pid, :tick)
       Process.sleep(10)
 
-      state = VillagerServer.get_state("v13")
+      state = Server.get_state("v13")
       assert state.location == {1, 1}
 
       # Second tick - realize we're at destination and become idle
       send(pid, :tick)
       Process.sleep(10)
 
-      state = VillagerServer.get_state("v13")
+      state = Server.get_state("v13")
       assert state.location == {1, 1}
       assert state.state == :idle
     end
@@ -278,19 +278,19 @@ defmodule EverStead.Simulation.VillagerServerTest do
 
   describe "get_gathering_rate/1" do
     test "returns correct rates for each resource type" do
-      assert VillagerServer.get_gathering_rate(:wood) == 5
-      assert VillagerServer.get_gathering_rate(:stone) == 3
-      assert VillagerServer.get_gathering_rate(:food) == 8
+      assert Server.get_gathering_rate(:wood) == 5
+      assert Server.get_gathering_rate(:stone) == 3
+      assert Server.get_gathering_rate(:food) == 8
     end
 
     test "returns default rate for unknown resource" do
-      assert VillagerServer.get_gathering_rate(:unknown) == 5
+      assert Server.get_gathering_rate(:unknown) == 5
     end
   end
 
   describe "get_movement_speed/0" do
     test "returns movement speed" do
-      assert VillagerServer.get_movement_speed() == 1
+      assert Server.get_movement_speed() == 1
     end
   end
 end

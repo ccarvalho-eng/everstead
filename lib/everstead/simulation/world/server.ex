@@ -1,4 +1,4 @@
-defmodule EverStead.Simulation.WorldServer do
+defmodule EverStead.Simulation.World.Server do
   @moduledoc """
   Central world simulation server that drives the game tick cycle.
 
@@ -90,8 +90,8 @@ defmodule EverStead.Simulation.WorldServer do
     )
 
     # Broadcast tick to all PlayerServers and VillagerServers
-    EverStead.Simulation.PlayerSupervisor.broadcast_tick()
-    EverStead.Simulation.VillagerSupervisor.broadcast_tick()
+    EverStead.Simulation.Player.Supervisor.broadcast_tick()
+    EverStead.Simulation.Kingdom.Villager.Supervisor.broadcast_tick()
 
     schedule_tick()
     {:noreply, %{state | season: new_season, total_ticks: new_total_ticks}}

@@ -1,4 +1,4 @@
-defmodule EverStead.Simulation.VillagerSupervisor do
+defmodule EverStead.Simulation.Kingdom.Villager.Supervisor do
   @moduledoc """
   Dynamic supervisor for managing villager server processes.
 
@@ -35,7 +35,7 @@ defmodule EverStead.Simulation.VillagerSupervisor do
   """
   @spec start_villager(String.t(), String.t(), String.t()) :: DynamicSupervisor.on_start_child()
   def start_villager(villager_id, villager_name, player_id) do
-    spec = {EverStead.Simulation.VillagerServer, {villager_id, villager_name, player_id}}
+    spec = {EverStead.Simulation.Kingdom.Villager.Server, {villager_id, villager_name, player_id}}
     DynamicSupervisor.start_child(__MODULE__, spec)
   end
 

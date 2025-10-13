@@ -16,10 +16,10 @@ defmodule Everstead.Application do
       # {Everstead.Worker, arg},
       {Registry, keys: :unique, name: EverStead.PlayerRegistry},
       {Registry, keys: :unique, name: EverStead.VillagerRegistry},
-      EverStead.Simulation.WorldServer,
-      {EverStead.Simulation.PlayerSupervisor, []},
-      {EverStead.Simulation.VillagerSupervisor, []},
-      EverStead.Simulation.JobManager,
+      EverStead.Simulation.World.Server,
+      {EverStead.Simulation.Player.Supervisor, []},
+      {EverStead.Simulation.Kingdom.Villager.Supervisor, []},
+      EverStead.Simulation.Kingdom.JobManager,
       # Start to serve requests, typically the last entry
       EversteadWeb.Endpoint
     ]

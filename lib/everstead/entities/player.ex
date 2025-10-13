@@ -16,6 +16,7 @@ defmodule EverStead.Entities.Player do
   @primary_key {:id, :binary_id, autogenerate: true}
   embedded_schema do
     field :name, :string
+
     embeds_one :kingdom, Kingdom
   end
 
