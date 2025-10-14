@@ -9,6 +9,7 @@ defmodule EverStead.Simulation.Kingdom.Builder do
   alias EverStead.Entities.Player
   alias EverStead.Entities.World.Kingdom.Building
   alias EverStead.Entities.World.Tile
+  alias EverStead.Kingdom, as: KingdomContext
   alias EverStead.World
 
   @building_costs %{
@@ -200,12 +201,11 @@ defmodule EverStead.Simulation.Kingdom.Builder do
   defp validate_resources(player, building_type) do
     cost = Map.get(@building_costs, building_type, %{wood: 0, stone: 0, food: 0})
 
-    has_resources? =
-      Enum.all?(cost, fn {resource, amount} ->
-        Map.get(player.kingdom.resources, resource, 0) >= amount
-      end)
-
-    if has_resources?, do: :ok, else: {:error, :insufficient_resources}
+    if KingdomContext.has_resources?(player.kingdom, cost) do
+      :ok
+    else
+      {:error, :insufficient_resources}
+    end
   end
 
   @spec create_building(Building.type(), {integer(), integer()}) :: Building.t()
@@ -222,13 +222,7 @@ defmodule EverStead.Simulation.Kingdom.Builder do
   @spec deduct_resources(Player.t(), Building.type()) :: Player.t()
   defp deduct_resources(player, building_type) do
     cost = Map.get(@building_costs, building_type, %{wood: 0, stone: 0, food: 0})
-
-    updated_resources =
-      Enum.reduce(cost, player.kingdom.resources, fn {resource, amount}, acc ->
-        Map.update!(acc, resource, &(&1 - amount))
-      end)
-
-    updated_kingdom = %{player.kingdom | resources: updated_resources}
+    updated_kingdom = KingdomContext.deduct_resources(player.kingdom, cost)
     %{player | kingdom: updated_kingdom}
   end
 
@@ -236,13 +230,12 @@ defmodule EverStead.Simulation.Kingdom.Builder do
   defp refund_resources(player, building_type, percentage) do
     cost = Map.get(@building_costs, building_type, %{wood: 0, stone: 0, food: 0})
 
-    updated_resources =
-      Enum.reduce(cost, player.kingdom.resources, fn {resource, amount}, acc ->
-        refund_amount = floor(amount * percentage)
-        Map.update!(acc, resource, &(&1 + refund_amount))
+    refund_amounts =
+      Enum.into(cost, %{}, fn {resource, amount} ->
+        {resource, floor(amount * percentage)}
       end)
 
-    updated_kingdom = %{player.kingdom | resources: updated_resources}
+    updated_kingdom = KingdomContext.add_resources(player.kingdom, refund_amounts)
     %{player | kingdom: updated_kingdom}
   end
 

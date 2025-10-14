@@ -5,6 +5,7 @@ defmodule EverStead.Entities.World.Kingdom do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias EverStead.Entities.World.{Resource}
   alias EverStead.Entities.World.Kingdom.{Building, Villager}
 
   @type t :: %__MODULE__{
@@ -12,16 +13,16 @@ defmodule EverStead.Entities.World.Kingdom do
           name: String.t(),
           villagers: [Villager.t()],
           buildings: [Building.t()],
-          resources: map()
+          resources: [Resource.t()]
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}
   embedded_schema do
     field :name, :string
-    field :resources, :map, default: %{wood: 0, stone: 0, food: 0}
 
     embeds_many :villagers, Villager
     embeds_many :buildings, Building
+    embeds_many :resources, Resource
   end
 
   @doc """
@@ -30,9 +31,10 @@ defmodule EverStead.Entities.World.Kingdom do
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(kingdom, attrs) do
     kingdom
-    |> cast(attrs, [:name, :resources])
+    |> cast(attrs, [:name])
     |> cast_embed(:villagers)
     |> cast_embed(:buildings)
+    |> cast_embed(:resources)
     |> validate_required([:name])
   end
 end

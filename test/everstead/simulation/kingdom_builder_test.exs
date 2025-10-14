@@ -3,12 +3,19 @@ defmodule EverStead.Simulation.Kingdom.BuilderTest do
 
   alias EverStead.Simulation.Kingdom.Builder
   alias EverStead.Entities.Player
-  alias EverStead.Entities.World.Kingdom
+  alias EverStead.Entities.World.Kingdom, as: KingdomEntity
   alias EverStead.Entities.World.Kingdom.Building
+  alias EverStead.Entities.World.Resource
   alias EverStead.Entities.World.Tile
+  alias EverStead.Kingdom
 
-  defp create_player(resources) do
-    kingdom = %Kingdom{
+  defp create_player(resource_map) do
+    resources =
+      Enum.map(resource_map, fn {type, amount} ->
+        %Resource{type: type, amount: amount}
+      end)
+
+    kingdom = %KingdomEntity{
       id: "k1",
       name: "Test Kingdom",
       villagers: [],
@@ -38,9 +45,9 @@ defmodule EverStead.Simulation.Kingdom.BuilderTest do
       assert is_binary(building.id)
 
       # Verify resources were deducted (house costs: wood: 50, stone: 20)
-      assert updated_player.kingdom.resources.wood == 50
-      assert updated_player.kingdom.resources.stone == 30
-      assert updated_player.kingdom.resources.food == 10
+      assert Kingdom.get_resource_amount(updated_player.kingdom, :wood) == 50
+      assert Kingdom.get_resource_amount(updated_player.kingdom, :stone) == 30
+      assert Kingdom.get_resource_amount(updated_player.kingdom, :food) == 10
 
       # Verify building was added to player's kingdom
       assert Enum.any?(updated_player.kingdom.buildings, fn b -> b.id == building.id end)
@@ -87,24 +94,24 @@ defmodule EverStead.Simulation.Kingdom.BuilderTest do
                Builder.place_building(player, tile, :farm, {1, 1})
 
       assert farm.type == :farm
-      assert updated_player.kingdom.resources.wood == 170
-      assert updated_player.kingdom.resources.stone == 90
+      assert Kingdom.get_resource_amount(updated_player.kingdom, :wood) == 170
+      assert Kingdom.get_resource_amount(updated_player.kingdom, :stone) == 90
 
       # Test lumberyard
       assert {:ok, {updated_player2, lumberyard}} =
                Builder.place_building(updated_player, tile, :lumberyard, {2, 2})
 
       assert lumberyard.type == :lumberyard
-      assert updated_player2.kingdom.resources.wood == 130
-      assert updated_player2.kingdom.resources.stone == 60
+      assert Kingdom.get_resource_amount(updated_player2.kingdom, :wood) == 130
+      assert Kingdom.get_resource_amount(updated_player2.kingdom, :stone) == 60
 
       # Test storage
       assert {:ok, {updated_player3, storage}} =
                Builder.place_building(updated_player2, tile, :storage, {3, 3})
 
       assert storage.type == :storage
-      assert updated_player3.kingdom.resources.wood == 70
-      assert updated_player3.kingdom.resources.stone == 20
+      assert Kingdom.get_resource_amount(updated_player3.kingdom, :wood) == 70
+      assert Kingdom.get_resource_amount(updated_player3.kingdom, :stone) == 20
     end
   end
 
@@ -277,10 +284,14 @@ defmodule EverStead.Simulation.Kingdom.BuilderTest do
 
   describe "cancel_construction/2" do
     test "refunds 50% of resources when construction is less than 50% complete" do
-      kingdom = %Kingdom{
+      kingdom = %KingdomEntity{
         id: "k1",
         name: "Test Kingdom",
-        resources: %{wood: 10, stone: 5, food: 0},
+        resources: [
+          %Resource{type: :wood, amount: 10},
+          %Resource{type: :stone, amount: 5},
+          %Resource{type: :food, amount: 0}
+        ],
         buildings: [%Building{id: "b1", type: :house, location: %{}, construction_progress: 0}]
       }
 
@@ -296,19 +307,23 @@ defmodule EverStead.Simulation.Kingdom.BuilderTest do
 
       # House costs: wood: 50, stone: 20
       # 50% refund: wood: 25, stone: 10
-      assert updated_player.kingdom.resources.wood == 35
-      assert updated_player.kingdom.resources.stone == 15
-      assert updated_player.kingdom.resources.food == 0
+      assert Kingdom.get_resource_amount(updated_player.kingdom, :wood) == 35
+      assert Kingdom.get_resource_amount(updated_player.kingdom, :stone) == 15
+      assert Kingdom.get_resource_amount(updated_player.kingdom, :food) == 0
 
       # Building should be removed from player's kingdom
       refute Enum.any?(updated_player.kingdom.buildings, fn b -> b.id == "b1" end)
     end
 
     test "refunds nothing when construction is 50% or more complete" do
-      kingdom = %Kingdom{
+      kingdom = %KingdomEntity{
         id: "k1",
         name: "Test Kingdom",
-        resources: %{wood: 10, stone: 5, food: 0},
+        resources: [
+          %Resource{type: :wood, amount: 10},
+          %Resource{type: :stone, amount: 5},
+          %Resource{type: :food, amount: 0}
+        ],
         buildings: [%Building{id: "b1", type: :house, location: %{}, construction_progress: 0}]
       }
 
@@ -323,8 +338,8 @@ defmodule EverStead.Simulation.Kingdom.BuilderTest do
       {:ok, updated_player} = Builder.cancel_construction(player, building)
 
       # No refund
-      assert updated_player.kingdom.resources.wood == 10
-      assert updated_player.kingdom.resources.stone == 5
+      assert Kingdom.get_resource_amount(updated_player.kingdom, :wood) == 10
+      assert Kingdom.get_resource_amount(updated_player.kingdom, :stone) == 5
 
       # Building should still be removed
       refute Enum.any?(updated_player.kingdom.buildings, fn b -> b.id == "b1" end)
