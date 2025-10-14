@@ -23,6 +23,6 @@ defmodule EverStead.Entities.PlayerTest do
     assert player.kingdom.id == "k1"
     assert player.kingdom.villagers == []
     assert player.kingdom.buildings == []
-    assert player.kingdom.resources == %{wood: 0, stone: 0, food: 0}
+    assert player.kingdom.resources == []
   end
 end
