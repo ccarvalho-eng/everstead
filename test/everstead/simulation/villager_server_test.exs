@@ -222,6 +222,10 @@ defmodule EverStead.Simulation.Kingdom.Villager.ServerTest do
     test "villager moves towards target location" do
       {:ok, pid} = Server.start_link({"v12", "Leo", "p1"})
 
+      # Check initial location before assigning job
+      initial_state = Server.get_state("v12")
+      assert initial_state.location == {0, 0}
+
       job = %Job{
         id: "j9",
         type: :move,
@@ -231,9 +235,6 @@ defmodule EverStead.Simulation.Kingdom.Villager.ServerTest do
 
       Server.assign_job("v12", job)
       Process.sleep(10)
-
-      initial_state = Server.get_state("v12")
-      assert initial_state.location == {0, 0}
 
       # Simulate tick
       send(pid, :tick)
