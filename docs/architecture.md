@@ -53,8 +53,39 @@ sequenceDiagram
     VS->>PS: call(:update_resources)
 ```
 
-## Registries
+## Registry Architecture
 
-- **PlayerRegistry**: `player_id → player_pid`
-- **KingdomRegistry**: `kingdom_id → kingdom_pid`
-- **VillagerRegistry**: `villager_id → villager_pid`
+```mermaid
+graph LR
+    subgraph "Process Discovery"
+        PR[PlayerRegistry<br/>player_id → player_pid]
+        KR[KingdomRegistry<br/>kingdom_id → kingdom_pid]
+        VR[VillagerRegistry<br/>villager_id → villager_pid]
+    end
+    
+    subgraph "Naming Convention"
+        PR --> P1[player_123]
+        KR --> K1[kingdom_player_123]
+        KR --> K2[villagers_player_123]
+        KR --> K3[jobmanager_player_123]
+        VR --> V1[villager_456]
+    end
+```
+
+## Error Handling
+
+```mermaid
+graph TD
+    A[Process Crash] --> B{Supervisor Strategy}
+    B -->|one_for_one| C[Restart Only Crashed Process]
+    B -->|one_for_all| D[Restart All Children]
+    B -->|rest_for_one| E[Restart Crashed + Following]
+    
+    C --> F[Isolated Failure]
+    D --> G[Complete Restart]
+    E --> H[Partial Restart]
+    
+    F --> I[Continue Operation]
+    G --> J[Full Recovery]
+    H --> K[Selective Recovery]
+```
