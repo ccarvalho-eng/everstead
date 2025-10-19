@@ -49,7 +49,11 @@ defmodule EverStead.Simulation.Player.Server do
       name: "#{name}'s Kingdom",
       villagers: [],
       buildings: [],
-      resources: %{wood: 0, stone: 0, food: 0}
+      resources: [
+        %EverStead.Entities.World.Resource{type: :wood, amount: 0},
+        %EverStead.Entities.World.Resource{type: :stone, amount: 0},
+        %EverStead.Entities.World.Resource{type: :food, amount: 0}
+      ]
     }
 
     player = %Player{

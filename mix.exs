@@ -11,7 +11,8 @@ defmodule Everstead.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      docs: docs()
     ]
   end
 
@@ -28,6 +29,48 @@ defmodule Everstead.MixProject do
   def cli do
     [
       preferred_envs: [precommit: :test]
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      name: "Everstead",
+      source_url: "https://github.com/your-username/everstead",
+      homepage_url: "https://github.com/your-username/everstead",
+      extras: [
+        "README.md",
+        "docs/iex-tutorial.md",
+        "docs/game-mechanics.md"
+      ],
+      groups_for_modules: [
+        "Game Simulation": [
+          EverStead.Simulation.World.Server,
+          EverStead.Simulation.Player.Server,
+          EverStead.Simulation.Kingdom.Villager.Server,
+          EverStead.Simulation.Kingdom.JobManager
+        ],
+        "Utility Modules": [
+          EverStead.GameMonitor,
+          EverStead.ResourceWaiter
+        ],
+        "Kingdom Management": [
+          EverStead.Kingdom,
+          EverStead.Simulation.Kingdom.Builder
+        ],
+        "World Context": [
+          EverStead.World
+        ],
+        Entities: [
+          EverStead.Entities.World.Kingdom,
+          EverStead.Entities.World.Resource,
+          EverStead.Entities.World.Kingdom.Villager,
+          EverStead.Entities.World.Kingdom.Building,
+          EverStead.Entities.World.Kingdom.Job,
+          EverStead.Entities.World.Season,
+          EverStead.Entities.World.Tile
+        ]
+      ]
     ]
   end
 
@@ -65,7 +108,8 @@ defmodule Everstead.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:ex_doc, "~> 0.31", only: :dev, runtime: false}
     ]
   end
 
@@ -88,6 +132,7 @@ defmodule Everstead.MixProject do
         "esbuild everstead --minify",
         "phx.digest"
       ],
+      docs: ["docs", "cmd ./scripts/docs.sh"],
       precommit: ["compile --warning-as-errors", "deps.unlock --unused", "format", "test"]
     ]
   end
