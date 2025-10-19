@@ -64,16 +64,35 @@ kingdom = Everstead.Kingdom.add_job(kingdom, food_job)
 Everstead.Simulation.Player.Server.start_link(player)
 ```
 
-## Check Resources
+## Check Player State
 
 ```elixir
-# Check current resources
-Everstead.Simulation.Player.Server.get_state(player.id)
-
-# Check specific resource amounts
+# Get full player state
 state = Everstead.Simulation.Player.Server.get_state(player.id)
+
+# Check player info
+state.name
+state.id
+
+# Check kingdom info
+state.kingdom.name
+state.kingdom.id
+
+# Check villagers
+villagers = state.kingdom.villagers
+Enum.map(villagers, fn v -> {v.name, v.profession, v.state} end)
+
+# Check resources
 resources = state.kingdom.resources
 Enum.map(resources, fn r -> {r.type, r.amount} end)
+
+# Check buildings
+buildings = state.kingdom.buildings
+Enum.map(buildings, fn b -> {b.type, b.location} end)
+
+# Check jobs
+jobs = state.kingdom.jobs
+Enum.map(jobs, fn j -> {j.type, j.status} end)
 ```
 
 ## Create Building Job
