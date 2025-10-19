@@ -95,6 +95,39 @@ jobs = state.kingdom.jobs
 Enum.map(jobs, fn j -> {j.type, j.status} end)
 ```
 
+## Villager Gathering Behavior
+
+```elixir
+# Check villager states during gathering
+state = Everstead.Simulation.Player.Server.get_state(player.id)
+villagers = state.kingdom.villagers
+
+# Villagers stop gathering when:
+# 1. Job is completed (gathered required amount)
+# 2. No more resources at location
+# 3. Villager becomes idle (no more jobs assigned)
+
+# Check if villager is still working
+Enum.map(villagers, fn v -> 
+  case v.state do
+    :working -> "#{v.name} is working on #{v.current_job}"
+    :idle -> "#{v.name} is idle"
+    :moving -> "#{v.name} is moving"
+    :resting -> "#{v.name} is resting"
+  end
+end)
+
+# Check job completion
+jobs = state.kingdom.jobs
+Enum.map(jobs, fn j -> 
+  case j.status do
+    :pending -> "Job pending"
+    :in_progress -> "Job in progress"
+    :done -> "Job completed"
+  end
+end)
+```
+
 ## Create Building Job
 
 ```elixir
