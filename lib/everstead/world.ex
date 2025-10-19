@@ -1,11 +1,11 @@
-defmodule EverStead.World do
+defmodule Everstead.World do
   @moduledoc """
   Context module for world-related operations.
 
   Handles season progression, multipliers, and other world mechanics.
   """
 
-  alias EverStead.Entities.World.Season
+  alias Everstead.Entities.World.Season
 
   @season_duration 60
   @resource_multipliers %{spring: 1.0, summer: 1.2, fall: 1.1, winter: 0.7}

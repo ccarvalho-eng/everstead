@@ -1,4 +1,4 @@
-defmodule EverStead.Entities.World.Season do
+defmodule Everstead.Entities.World.Season do
   @moduledoc """
   Season entity with cycle and year tracking.
   """

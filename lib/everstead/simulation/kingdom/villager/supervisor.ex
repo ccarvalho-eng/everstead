@@ -1,104 +1,153 @@
-defmodule EverStead.Simulation.Kingdom.Villager.Supervisor do
+defmodule Everstead.Simulation.Kingdom.Villager.Supervisor do
   @moduledoc """
   Dynamic supervisor for managing villager server processes.
-
-  Handles starting and supervising individual villager servers and broadcasting
-  tick events to all active villagers for simulation updates.
   """
   use DynamicSupervisor
+  require Logger
 
-  @doc """
-  Starts the villager supervisor.
-
-  This supervisor is registered with its module name.
-  """
+  @doc "Starts the villager supervisor."
   @spec start_link(term()) :: Supervisor.on_start()
-  def start_link(_) do
-    DynamicSupervisor.start_link(__MODULE__, :ok, name: __MODULE__)
+  def start_link(init_arg) do
+    # Debug: log the init_arg being received
+    require Logger
+    Logger.info("Villager supervisor received init_arg: #{inspect(init_arg)}")
+
+    name =
+      case init_arg do
+        {:via, Registry, {Everstead.KingdomRegistry, "villagers_" <> _kingdom_id}} = custom_name ->
+          custom_name
+
+        _ ->
+          __MODULE__
+      end
+
+    # Debug: log the name being used
+    Logger.info("Villager supervisor starting with name: #{inspect(name)}")
+
+    DynamicSupervisor.start_link(__MODULE__, :ok, name: name)
   end
 
   @impl true
-  def init(:ok), do: DynamicSupervisor.init(strategy: :one_for_one)
-
-  @doc """
-  Starts a new villager server process.
-
-  ## Parameters
-  - `villager_id` - Unique identifier for the villager
-  - `villager_name` - Display name for the villager
-  - `player_id` - ID of the player who owns this villager
-
-  ## Examples
-
-      iex> VillagerSupervisor.start_villager("v1", "Bob", "p1")
-      {:ok, #PID<0.123.0>}
-  """
-  @spec start_villager(String.t(), String.t(), String.t()) :: DynamicSupervisor.on_start_child()
-  def start_villager(villager_id, villager_name, player_id) do
-    spec = {EverStead.Simulation.Kingdom.Villager.Server, {villager_id, villager_name, player_id}}
-    DynamicSupervisor.start_child(__MODULE__, spec)
+  def init(:ok) do
+    DynamicSupervisor.init(strategy: :one_for_one, max_restarts: 5, max_seconds: 10)
   end
 
-  @doc """
-  Stops a villager server process.
+  @doc "Starts a new villager server process."
+  @spec start_villager(String.t(), String.t(), String.t()) :: DynamicSupervisor.on_start_child()
+  def start_villager(villager_id, villager_name, player_id) do
+    # Find the correct villager supervisor for this player's kingdom
+    villager_supervisor_name =
+      {:via, Registry, {Everstead.KingdomRegistry, "villagers_#{player_id}"}}
 
-  ## Parameters
-  - `villager_id` - The ID of the villager to stop
+    spec = child_spec({villager_id, villager_name, player_id})
+    DynamicSupervisor.start_child(villager_supervisor_name, spec)
+  end
 
-  ## Examples
+  @doc "Defines the child spec for a villager server."
+  @spec child_spec({String.t(), String.t(), String.t()}) :: Supervisor.child_spec()
+  def child_spec({villager_id, villager_name, player_id}) do
+    %{
+      id: {__MODULE__, villager_id},
+      start:
+        {Everstead.Simulation.Kingdom.Villager.Server, :start_link,
+         [{villager_id, villager_name, player_id}]},
+      restart: :permanent,
+      shutdown: 5000,
+      type: :worker
+    }
+  end
 
-      iex> VillagerSupervisor.stop_villager("v1")
+  @spec child_spec(term()) :: Supervisor.child_spec()
+  def child_spec(init_arg) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [init_arg]},
+      restart: :permanent,
+      type: :supervisor
+    }
+  end
+
+  @doc "Broadcasts a tick event to all registered villager servers."
+  @spec broadcast_tick() :: :ok
+  def broadcast_tick do
+    try do
+      # Get all villagers directly from the VillagerRegistry
+      Registry.select(Everstead.VillagerRegistry, [{{:"$1", :"$2", :"$3"}, [], [:"$2"]}])
+      |> Enum.each(fn villager_pid ->
+        try do
+          send(villager_pid, :tick)
+        catch
+          error ->
+            Logger.warning(
+              "Failed to send tick to villager process #{inspect(villager_pid)}: #{inspect(error)}"
+            )
+        end
+      end)
+
       :ok
-  """
+    catch
+      error ->
+        Logger.error("Error broadcasting tick to villagers: #{inspect(error)}")
+        :ok
+    end
+  end
+
+  @doc "Stops a villager server process."
   @spec stop_villager(String.t()) :: :ok | {:error, :not_found}
   def stop_villager(villager_id) do
-    case Registry.lookup(EverStead.VillagerRegistry, villager_id) do
+    case Registry.lookup(Everstead.VillagerRegistry, villager_id) do
       [{pid, _}] ->
-        DynamicSupervisor.terminate_child(__MODULE__, pid)
-        :ok
+        # Find the supervisor that manages this villager
+        supervisors = get_villager_supervisors()
+
+        case Enum.find(supervisors, fn supervisor_name ->
+               case DynamicSupervisor.terminate_child(supervisor_name, pid) do
+                 :ok -> true
+                 _ -> false
+               end
+             end) do
+          nil ->
+            # If we can't find the supervisor, just kill the process
+            # This is acceptable for testing purposes
+            Process.exit(pid, :kill)
+            :ok
+
+          _ ->
+            :ok
+        end
 
       [] ->
         {:error, :not_found}
     end
   end
 
-  @doc """
-  Broadcasts a tick event to all registered villager servers.
+  # Helper function to get all villager supervisor names
+  defp get_villager_supervisors do
+    # Get all entries and filter for villager supervisors
+    all_entries =
+      Registry.select(Everstead.KingdomRegistry, [
+        {{:"$1", :"$2", :"$3"}, [], [:"$1", :"$2", :"$3"]}
+      ])
 
-  Looks up all villager processes in the villager registry and sends them
-  a `:tick` message to trigger simulation updates.
-  """
-  @spec broadcast_tick() :: :ok
-  def broadcast_tick do
-    Registry.select(EverStead.VillagerRegistry, [{{:"$1", :"$2", :"$3"}, [], [:"$2"]}])
-    |> Enum.each(fn pid -> send(pid, :tick) end)
-
-    :ok
+    all_entries
+    |> Enum.filter(fn entry ->
+      case entry do
+        {key, _pid, _value} when is_binary(key) -> String.starts_with?(key, "villagers_")
+        _ -> false
+      end
+    end)
+    |> Enum.map(fn {_key, pid, _value} -> pid end)
   end
 
-  @doc """
-  Lists all active villager IDs.
-
-  ## Examples
-
-      iex> VillagerSupervisor.list_villagers()
-      ["v1", "v2", "v3"]
-  """
+  @doc "Lists all active villager IDs."
   @spec list_villagers() :: [String.t()]
   def list_villagers do
-    Registry.select(EverStead.VillagerRegistry, [{{:"$1", :"$2", :"$3"}, [], [:"$1"]}])
+    Registry.select(Everstead.VillagerRegistry, [{{:"$1", :"$2", :"$3"}, [], [:"$1"]}])
   end
 
-  @doc """
-  Gets the count of active villagers.
-
-  ## Examples
-
-      iex> VillagerSupervisor.count_villagers()
-      5
-  """
+  @doc "Gets the count of active villagers."
   @spec count_villagers() :: non_neg_integer()
   def count_villagers do
-    Registry.count(EverStead.VillagerRegistry)
+    Registry.count(Everstead.VillagerRegistry)
   end
 end

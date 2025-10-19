@@ -1,4 +1,4 @@
-defmodule EverStead.Entities.World.Kingdom.Building do
+defmodule Everstead.Entities.World.Kingdom.Building do
   @moduledoc """
   Building entity with type, location, and construction status.
   """

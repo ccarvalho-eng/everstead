@@ -1,7 +1,7 @@
-defmodule EverStead.Entities.ResourceTest do
+defmodule Everstead.Entities.ResourceTest do
   use ExUnit.Case, async: true
 
-  alias EverStead.Entities.World.Resource
+  alias Everstead.Entities.World.Resource
 
   test "creates a resource with valid attributes" do
     attributes = %{

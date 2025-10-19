@@ -1,7 +1,7 @@
-defmodule EverStead.Entities.TileTest do
+defmodule Everstead.Entities.TileTest do
   use ExUnit.Case, async: true
 
-  alias EverStead.Entities.World.{Resource, Tile}
+  alias Everstead.Entities.World.{Resource, Tile}
 
   test "creates a tile with valid attributes" do
     resource = struct(Resource, %{type: :wood, amount: 100})

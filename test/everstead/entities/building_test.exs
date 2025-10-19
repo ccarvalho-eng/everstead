@@ -1,7 +1,7 @@
-defmodule EverStead.Entities.BuildingTest do
+defmodule Everstead.Entities.BuildingTest do
   use ExUnit.Case, async: true
 
-  alias EverStead.Entities.World.Kingdom.Building
+  alias Everstead.Entities.World.Kingdom.Building
 
   test "creates a building with valid attributes" do
     attributes = %{

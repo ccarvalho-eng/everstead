@@ -1,12 +1,12 @@
-defmodule EverStead.Entities.World.Kingdom do
+defmodule Everstead.Entities.World.Kingdom do
   @moduledoc """
   Kingdom entity with villagers, buildings, and resources.
   """
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias EverStead.Entities.World.Resource
-  alias EverStead.Entities.World.Kingdom.{Building, Villager}
+  alias Everstead.Entities.World.Resource
+  alias Everstead.Entities.World.Kingdom.{Building, Villager}
 
   @type t :: %__MODULE__{
           id: binary(),

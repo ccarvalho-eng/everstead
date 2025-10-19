@@ -28,6 +28,18 @@ A detailed explanation of all game systems and mechanics. This guide covers:
 
 **Perfect for:** Players who want to understand how the game works under the hood.
 
+### [Architecture Documentation](architecture.md)
+Comprehensive technical documentation covering the system architecture. This guide covers:
+
+- Data modeling and entity relationships
+- OTP supervision tree structure
+- Process communication patterns
+- Registry architecture and process discovery
+- Error handling and fault tolerance strategies
+- Scalability considerations and performance characteristics
+
+**Perfect for:** Developers who want to understand the system architecture and contribute to the codebase.
+
 ### [API Reference](api-reference.md)
 Complete reference documentation for all public APIs in the game. This reference covers:
 
@@ -105,7 +117,8 @@ If you're new to Everstead, we recommend reading the documentation in this order
 
 1. **[IEx Tutorial](iex-tutorial.md)** - Learn to play the game
 2. **[Game Mechanics Guide](game-mechanics.md)** - Understand how it works
-3. **[API Reference](api-reference.md)** - Reference for development
+3. **[Architecture Documentation](architecture.md)** - Understand the technical design
+4. **[API Reference](api-reference.md)** - Reference for development
 
 ## 🤝 Contributing
 

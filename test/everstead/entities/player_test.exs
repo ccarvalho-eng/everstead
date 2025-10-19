@@ -1,8 +1,8 @@
-defmodule EverStead.Entities.PlayerTest do
+defmodule Everstead.Entities.PlayerTest do
   use ExUnit.Case, async: true
 
-  alias EverStead.Entities.Player
-  alias EverStead.Entities.World.Kingdom
+  alias Everstead.Entities.Player
+  alias Everstead.Entities.World.Kingdom
 
   test "creates a player with valid attributes" do
     kingdom = %Kingdom{

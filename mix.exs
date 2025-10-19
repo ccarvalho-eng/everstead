@@ -50,10 +50,6 @@ defmodule Everstead.MixProject do
           EverStead.Simulation.Kingdom.Villager.Server,
           EverStead.Simulation.Kingdom.JobManager
         ],
-        "Utility Modules": [
-          EverStead.GameMonitor,
-          EverStead.ResourceWaiter
-        ],
         "Kingdom Management": [
           EverStead.Kingdom,
           EverStead.Simulation.Kingdom.Builder

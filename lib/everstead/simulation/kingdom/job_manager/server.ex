@@ -1,4 +1,4 @@
-defmodule EverStead.Simulation.Kingdom.JobManager do
+defmodule Everstead.Simulation.Kingdom.JobManager.Server do
   @moduledoc """
   Manages job assignment and distribution for villagers.
 
@@ -16,9 +16,9 @@ defmodule EverStead.Simulation.Kingdom.JobManager do
   use GenServer
   require Logger
 
-  alias EverStead.Entities.World.Kingdom.Job
-  alias EverStead.Entities.World.Kingdom.Villager
-  alias EverStead.Simulation.Kingdom.Villager.Server, as: VillagerServer
+  alias Everstead.Entities.World.Kingdom.Job
+  alias Everstead.Entities.World.Kingdom.Villager
+  alias Everstead.Simulation.Kingdom.Villager.Server, as: VillagerServer
 
   @type priority :: :critical | :high | :normal | :low
   @type job_with_priority :: {Job.t(), priority()}
@@ -31,8 +31,17 @@ defmodule EverStead.Simulation.Kingdom.JobManager do
   The server is registered with its module name for global access.
   """
   @spec start_link(term()) :: GenServer.on_start()
-  def start_link(_) do
-    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
+  def start_link(init_arg) do
+    name =
+      if is_tuple(init_arg) and tuple_size(init_arg) == 3 do
+        # Custom name provided
+        init_arg
+      else
+        # Default name
+        __MODULE__
+      end
+
+    GenServer.start_link(__MODULE__, %{}, name: name)
   end
 
   @doc """
@@ -51,6 +60,14 @@ defmodule EverStead.Simulation.Kingdom.JobManager do
   @spec add_job(Job.t(), priority()) :: :ok
   def add_job(job, priority \\ :normal) do
     GenServer.cast(__MODULE__, {:add_job, job, priority})
+  end
+
+  @doc """
+  Gets the JobManager for a specific kingdom.
+  """
+  @spec get_for_kingdom(String.t()) :: GenServer.server()
+  def get_for_kingdom(kingdom_id) do
+    {:via, Registry, {Everstead.KingdomRegistry, "jobmanager_#{kingdom_id}"}}
   end
 
   @doc """
@@ -73,17 +90,18 @@ defmodule EverStead.Simulation.Kingdom.JobManager do
   Jobs are assigned based on priority.
 
   ## Parameters
+  - `server` - The JobManager server name or PID
   - `villagers` - Map of villager IDs to villager structs
 
   ## Examples
 
       iex> villagers = %{"v1" => %Villager{id: "v1", state: :idle}}
-      iex> JobManager.assign_jobs(villagers)
+      iex> JobManager.assign_jobs(server, villagers)
       :ok
   """
-  @spec assign_jobs(%{String.t() => Villager.t()}) :: :ok
-  def assign_jobs(villagers) do
-    GenServer.cast(__MODULE__, {:assign_jobs, villagers})
+  @spec assign_jobs(GenServer.server(), %{String.t() => Villager.t()}) :: :ok
+  def assign_jobs(server, villagers) do
+    GenServer.cast(server, {:assign_jobs, villagers})
   end
 
   @doc """
@@ -210,34 +228,50 @@ defmodule EverStead.Simulation.Kingdom.JobManager do
 
   @impl true
   def handle_cast(:check_stale_jobs, state) do
-    Logger.debug("Checking for stale jobs...")
+    try do
+      Logger.debug("Checking for stale jobs...")
 
-    {stale_jobs, valid_jobs} =
-      Enum.split_with(state.active_jobs, fn {_job_id, job_info} ->
-        case Registry.lookup(EverStead.VillagerRegistry, job_info.villager_id) do
-          [] -> true
-          [{_pid, _}] -> false
-        end
-      end)
+      {stale_jobs, valid_jobs} =
+        Enum.split_with(state.active_jobs, fn {_job_id, job_info} ->
+          try do
+            case Registry.lookup(Everstead.VillagerRegistry, job_info.villager_id) do
+              [] -> true
+              [{_pid, _}] -> false
+            end
+          catch
+            error ->
+              Logger.error(
+                "Error checking villager #{job_info.villager_id} in stale job check: #{inspect(error)}"
+              )
 
-    if length(stale_jobs) > 0 do
-      Logger.warning("Found #{length(stale_jobs)} stale jobs, returning to queue")
-
-      # Return stale jobs to queue with original priority
-      new_queue =
-        Enum.reduce(stale_jobs, state.job_queue, fn {_job_id, job_info}, queue ->
-          insert_by_priority(queue, {job_info.job, job_info.priority})
+              # Consider it stale if we can't check
+              true
+          end
         end)
 
-      new_state = %{
-        state
-        | job_queue: new_queue,
-          active_jobs: Map.new(valid_jobs)
-      }
+      if length(stale_jobs) > 0 do
+        Logger.warning("Found #{length(stale_jobs)} stale jobs, returning to queue")
 
-      {:noreply, new_state}
-    else
-      {:noreply, state}
+        # Return stale jobs to queue with original priority
+        new_queue =
+          Enum.reduce(stale_jobs, state.job_queue, fn {_job_id, job_info}, queue ->
+            insert_by_priority(queue, {job_info.job, job_info.priority})
+          end)
+
+        new_state = %{
+          state
+          | job_queue: new_queue,
+            active_jobs: Map.new(valid_jobs)
+        }
+
+        {:noreply, new_state}
+      else
+        {:noreply, state}
+      end
+    catch
+      error ->
+        Logger.error("Error in check_stale_jobs: #{inspect(error)}")
+        {:noreply, state}
     end
   end
 
@@ -270,7 +304,7 @@ defmodule EverStead.Simulation.Kingdom.JobManager do
     [{job, priority} | rest_queue] = state.job_queue
 
     # Check if villager still exists before assigning
-    case Registry.lookup(EverStead.VillagerRegistry, villager_id) do
+    case Registry.lookup(Everstead.VillagerRegistry, villager_id) do
       [] ->
         Logger.warning("Villager #{villager_id} not found, skipping job assignment")
         {:error, :no_jobs}

@@ -1,11 +1,11 @@
-defmodule EverStead.Entities.World do
+defmodule Everstead.Entities.World do
   @moduledoc """
   World entity with tile grid and season tracking.
   """
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias EverStead.Entities.World.Season
+  alias Everstead.Entities.World.Season
 
   @type t :: %__MODULE__{
           width: integer(),

@@ -1,16 +1,16 @@
-defmodule EverStead.Entities.Player do
+defmodule Everstead.Entities.Player do
   @moduledoc """
   Player entity with kingdom ownership.
   """
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias EverStead.Entities.World.Kingdom
+  alias Everstead.Entities.World.Kingdom
 
   @type t :: %__MODULE__{
           id: binary(),
           name: String.t(),
-          kingdom: EverStead.Entities.World.Kingdom.t() | nil
+          kingdom: Everstead.Entities.World.Kingdom.t() | nil
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}

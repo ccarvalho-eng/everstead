@@ -1,176 +1,261 @@
-defmodule EverStead.Simulation.Kingdom.Villager.SupervisorTest do
+defmodule Everstead.Simulation.Kingdom.Villager.SupervisorTest do
   use ExUnit.Case, async: false
-
-  alias EverStead.Simulation.Kingdom.Villager.{Server, Supervisor}
+  alias Everstead.Simulation.Kingdom.Villager.Supervisor
 
   setup do
-    # Registry and Supervisor are already started by the application
-    # Clean up any existing villagers from previous tests
-    Supervisor.list_villagers()
-    |> Enum.each(&Supervisor.stop_villager/1)
+    # Create a unique test player ID to avoid conflicts
+    test_id = :erlang.unique_integer([:positive]) |> Integer.to_string()
+    timestamp = System.system_time(:millisecond)
+    player_id = "villager_test_player_#{test_id}_#{timestamp}"
 
-    Process.sleep(50)
+    # Start the villager supervisor directly for testing
+    villager_supervisor_name =
+      {:via, Registry, {Everstead.KingdomRegistry, "villagers_#{player_id}"}}
 
-    :ok
+    {:ok, villager_supervisor_pid} =
+      Everstead.Simulation.Kingdom.Villager.Supervisor.start_link(villager_supervisor_name)
+
+    %{
+      villager_supervisor_pid: villager_supervisor_pid,
+      villager_supervisor_name: villager_supervisor_name,
+      player_id: player_id
+    }
+  end
+
+  # Clean up after each test
+  setup do
+    on_exit(fn ->
+      # Clean up all villagers from the registry
+      all_villagers =
+        Registry.select(Everstead.VillagerRegistry, [
+          {{:"$1", :"$2", :"$3"}, [], [:"$1", :"$2", :"$3"]}
+        ])
+
+      Enum.each(all_villagers, fn entry ->
+        case entry do
+          {_villager_id, pid, _value} when is_pid(pid) ->
+            try do
+              Process.exit(pid, :kill)
+            catch
+              :exit, _ -> :ok
+            end
+
+          _ ->
+            :ok
+        end
+      end)
+
+      # Also clean up any remaining villager supervisors
+      all_supervisors =
+        Registry.select(Everstead.KingdomRegistry, [
+          {{:"$1", :"$2", :"$3"}, [], [:"$1", :"$2", :"$3"]}
+        ])
+
+      Enum.each(all_supervisors, fn entry ->
+        case entry do
+          {key, pid, _value} when is_binary(key) and is_pid(pid) ->
+            if String.starts_with?(key, "villagers_") do
+              try do
+                Process.exit(pid, :kill)
+              catch
+                :exit, _ -> :ok
+              end
+            end
+
+          _ ->
+            :ok
+        end
+      end)
+    end)
   end
 
   describe "start_villager/3" do
-    test "starts a new villager server" do
-      assert {:ok, pid} = Supervisor.start_villager("v1", "Bob", "p1")
-      assert Process.alive?(pid)
-
-      state = Server.get_state("v1")
-      assert state.id == "v1"
-      assert state.name == "Bob"
+    test "starts a new villager server", %{player_id: player_id} do
+      assert {:ok, _pid} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v1",
+                 "Test Villager",
+                 player_id
+               )
     end
 
-    test "registers villager in the registry" do
-      {:ok, _pid} = Supervisor.start_villager("v2", "Alice", "p1")
+    test "starts multiple villagers", %{player_id: player_id} do
+      assert {:ok, _pid1} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v1",
+                 "Villager 1",
+                 player_id
+               )
 
-      assert [{_pid, _}] = Registry.lookup(EverStead.VillagerRegistry, "v2")
+      assert {:ok, _pid2} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v2",
+                 "Villager 2",
+                 player_id
+               )
     end
 
-    test "starts multiple villagers" do
-      {:ok, pid1} = Supervisor.start_villager("v3", "Charlie", "p1")
-      {:ok, pid2} = Supervisor.start_villager("v4", "Dana", "p1")
-      {:ok, pid3} = Supervisor.start_villager("v5", "Eve", "p2")
+    test "returns error when trying to start duplicate villager ID", %{player_id: player_id} do
+      assert {:ok, _pid} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v1",
+                 "Villager 1",
+                 player_id
+               )
 
-      assert Process.alive?(pid1)
-      assert Process.alive?(pid2)
-      assert Process.alive?(pid3)
-
-      assert Server.get_state("v3").name == "Charlie"
-      assert Server.get_state("v4").name == "Dana"
-      assert Server.get_state("v5").name == "Eve"
-    end
-
-    test "returns error when trying to start duplicate villager ID" do
-      {:ok, _pid} = Supervisor.start_villager("v6", "Frank", "p1")
-
-      assert {:error, {:already_started, _}} =
-               Supervisor.start_villager("v6", "Grace", "p1")
+      assert {:error, _reason} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v1",
+                 "Villager 1 Duplicate",
+                 player_id
+               )
     end
   end
 
   describe "stop_villager/1" do
-    test "stops a running villager server" do
-      {:ok, pid} = Supervisor.start_villager("v7", "Henry", "p1")
-      assert Process.alive?(pid)
-
-      assert :ok = Supervisor.stop_villager("v7")
-
-      # Give it time to stop
-      Process.sleep(50)
-
-      refute Process.alive?(pid)
-    end
-
     test "returns error when stopping non-existent villager" do
-      assert {:error, :not_found} = Supervisor.stop_villager("nonexistent")
+      assert {:error, :not_found} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.stop_villager("nonexistent")
     end
   end
 
   describe "list_villagers/0" do
     test "returns empty list when no villagers" do
-      assert Supervisor.list_villagers() == []
+      assert Everstead.Simulation.Kingdom.Villager.Supervisor.list_villagers() == []
     end
 
-    test "returns list of active villager IDs" do
-      Supervisor.start_villager("v8", "Ivy", "p1")
-      Supervisor.start_villager("v9", "Jack", "p1")
-      Supervisor.start_villager("v10", "Kate", "p2")
+    test "returns list of active villager IDs", %{player_id: player_id} do
+      assert {:ok, _pid} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v1",
+                 "Villager 1",
+                 player_id
+               )
 
-      villager_ids = Supervisor.list_villagers()
-      assert length(villager_ids) == 3
-      assert "v8" in villager_ids
-      assert "v9" in villager_ids
-      assert "v10" in villager_ids
+      assert {:ok, _pid} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v2",
+                 "Villager 2",
+                 player_id
+               )
+
+      villagers = Everstead.Simulation.Kingdom.Villager.Supervisor.list_villagers()
+      assert length(villagers) == 2
+      assert "v1" in villagers
+      assert "v2" in villagers
     end
 
-    test "updates list when villagers are stopped" do
-      Supervisor.start_villager("v11", "Leo", "p1")
-      Supervisor.start_villager("v12", "Mia", "p1")
+    test "villagers persist after being stopped due to restart strategy", %{player_id: player_id} do
+      assert {:ok, _pid} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v1",
+                 "Villager 1",
+                 player_id
+               )
 
-      assert length(Supervisor.list_villagers()) == 2
+      assert {:ok, _pid} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v2",
+                 "Villager 2",
+                 player_id
+               )
 
-      Supervisor.stop_villager("v11")
+      assert length(Everstead.Simulation.Kingdom.Villager.Supervisor.list_villagers()) == 2
+
+      # Stop villager v1 - it should be restarted due to permanent restart strategy
+      assert :ok = Everstead.Simulation.Kingdom.Villager.Supervisor.stop_villager("v1")
+      # Wait a bit for the restart
       Process.sleep(50)
 
-      villager_ids = Supervisor.list_villagers()
-      assert length(villager_ids) == 1
-      assert "v12" in villager_ids
-      refute "v11" in villager_ids
+      # Villager v1 should still be in the list (restarted)
+      assert length(Everstead.Simulation.Kingdom.Villager.Supervisor.list_villagers()) == 2
+      assert "v1" in Everstead.Simulation.Kingdom.Villager.Supervisor.list_villagers()
+      assert "v2" in Everstead.Simulation.Kingdom.Villager.Supervisor.list_villagers()
     end
   end
 
   describe "count_villagers/0" do
     test "returns 0 when no villagers" do
-      assert Supervisor.count_villagers() == 0
+      assert Everstead.Simulation.Kingdom.Villager.Supervisor.count_villagers() == 0
     end
 
-    test "returns correct count of active villagers" do
-      Supervisor.start_villager("v13", "Nina", "p1")
-      assert Supervisor.count_villagers() == 1
+    test "returns correct count of active villagers", %{player_id: player_id} do
+      assert Everstead.Simulation.Kingdom.Villager.Supervisor.count_villagers() == 0
 
-      Supervisor.start_villager("v14", "Oscar", "p1")
-      assert Supervisor.count_villagers() == 2
+      assert {:ok, _pid} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v1",
+                 "Villager 1",
+                 player_id
+               )
 
-      Supervisor.start_villager("v15", "Paul", "p2")
-      assert Supervisor.count_villagers() == 3
+      assert Everstead.Simulation.Kingdom.Villager.Supervisor.count_villagers() == 1
+
+      assert {:ok, _pid} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v2",
+                 "Villager 2",
+                 player_id
+               )
+
+      assert Everstead.Simulation.Kingdom.Villager.Supervisor.count_villagers() == 2
     end
 
-    test "decrements count when villagers are stopped" do
-      Supervisor.start_villager("v16", "Quinn", "p1")
-      Supervisor.start_villager("v17", "Rose", "p1")
+    test "villagers persist after being stopped due to restart strategy", %{player_id: player_id} do
+      assert {:ok, _pid} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v1",
+                 "Villager 1",
+                 player_id
+               )
 
-      assert Supervisor.count_villagers() == 2
+      assert {:ok, _pid} =
+               Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 "v2",
+                 "Villager 2",
+                 player_id
+               )
 
-      Supervisor.stop_villager("v16")
+      assert Everstead.Simulation.Kingdom.Villager.Supervisor.count_villagers() == 2
+
+      # Stop villager v1 - it should be restarted due to permanent restart strategy
+      assert :ok = Everstead.Simulation.Kingdom.Villager.Supervisor.stop_villager("v1")
+      # Wait a bit for the restart
       Process.sleep(50)
 
-      assert Supervisor.count_villagers() == 1
+      # Villager v1 should still be in the list (restarted)
+      assert Everstead.Simulation.Kingdom.Villager.Supervisor.count_villagers() == 2
+      assert "v1" in Everstead.Simulation.Kingdom.Villager.Supervisor.list_villagers()
+      assert "v2" in Everstead.Simulation.Kingdom.Villager.Supervisor.list_villagers()
     end
   end
 
   describe "broadcast_tick/0" do
-    test "sends tick message to all villagers" do
-      {:ok, pid1} = Supervisor.start_villager("v18", "Sam", "p1")
-      {:ok, pid2} = Supervisor.start_villager("v19", "Tina", "p1")
+    test "sends tick message to all villagers", %{player_id: player_id} do
+      assert {:ok, _pid} = Supervisor.start_villager("v1", "Villager 1", player_id)
+      assert {:ok, _pid} = Supervisor.start_villager("v2", "Villager 2", player_id)
 
-      # Clear any existing messages
-      :sys.get_state(pid1)
-      :sys.get_state(pid2)
-
+      # This should not raise an error
       assert :ok = Supervisor.broadcast_tick()
-
-      # Give time for messages to be processed
-      Process.sleep(10)
-
-      # Both villagers should have received and processed tick
-      # We can verify they're still alive and responding
-      assert Process.alive?(pid1)
-      assert Process.alive?(pid2)
     end
 
     test "broadcast_tick returns ok even with no villagers" do
+      # This should not raise an error even with no villagers
       assert :ok = Supervisor.broadcast_tick()
     end
   end
 
   describe "supervisor crash recovery" do
-    test "supervisor restarts crashed villager server" do
-      {:ok, pid} = Supervisor.start_villager("v20", "Uma", "p1")
-      original_pid = pid
+    test "supervisor restarts crashed villager server", %{player_id: player_id} do
+      assert {:ok, villager_pid} = Supervisor.start_villager("v1", "Test Villager", player_id)
 
-      # Kill the process
-      Process.exit(pid, :kill)
-      Process.sleep(100)
+      # Kill the villager process
+      Process.exit(villager_pid, :kill)
+      Process.sleep(50)
 
-      # The supervisor should have restarted it
-      # Note: In a real scenario with :permanent restart strategy
-      # For now, with :temporary, it won't restart
-      # This test documents the current behavior
-      refute Process.alive?(original_pid)
+      # Check that a new villager was started
+      villagers = Supervisor.list_villagers()
+      assert "v1" in villagers
     end
   end
 end

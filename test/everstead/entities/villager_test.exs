@@ -1,7 +1,7 @@
-defmodule EverStead.Entities.VillagerTest do
+defmodule Everstead.Entities.VillagerTest do
   use ExUnit.Case, async: true
 
-  alias EverStead.Entities.World.Kingdom.Villager
+  alias Everstead.Entities.World.Kingdom.Villager
 
   test "creates a villager with valid attributes" do
     attributes = %{

@@ -1,8 +1,8 @@
-defmodule EverStead.Entities.SeasonTest do
+defmodule Everstead.Entities.SeasonTest do
   use ExUnit.Case, async: true
 
-  alias EverStead.Entities.World.Season
-  alias EverStead.World
+  alias Everstead.Entities.World.Season
+  alias Everstead.World
 
   describe "season_duration/0" do
     test "returns the configured season duration" do

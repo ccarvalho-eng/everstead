@@ -1,4 +1,4 @@
-defmodule EverStead.Entities.World.Kingdom.Job do
+defmodule Everstead.Entities.World.Kingdom.Job do
   @moduledoc """
   Job entity with type, target, and assigned villager.
   """

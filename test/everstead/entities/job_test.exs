@@ -1,8 +1,8 @@
-defmodule EverStead.Entities.JobTest do
+defmodule Everstead.Entities.JobTest do
   use ExUnit.Case, async: true
 
-  alias EverStead.Entities.World.Kingdom.Job
-  alias EverStead.Entities.World.Tile
+  alias Everstead.Entities.World.Kingdom.Job
+  alias Everstead.Entities.World.Tile
 
   test "creates a job with valid attributes" do
     tile = struct(Tile, %{terrain: :grass})

@@ -12,7 +12,6 @@ This document provides a detailed explanation of all game mechanics in Everstead
 6. [Seasonal System](#seasonal-system)
 7. [World Simulation](#world-simulation)
 8. [Process Architecture](#process-architecture)
-9. [Utility Modules](#utility-modules)
 
 ## Core Systems
 
@@ -29,8 +28,8 @@ The World Server is the central coordinator of the game simulation:
 
 ```elixir
 # World Server manages these core functions:
-- EverStead.Simulation.World.Server.get_season()
-- EverStead.Simulation.World.Server.get_state()
+- Everstead.Simulation.World.Server.get_season()
+- Everstead.Simulation.World.Server.get_state()
 ```
 
 ### Player System
@@ -63,13 +62,13 @@ Each player has their own kingdom with:
 
 ```elixir
 # Check resource amount
-EverStead.Kingdom.get_resource_amount(kingdom, :wood)
+Everstead.Kingdom.get_resource_amount(kingdom, :wood)
 
 # Check if you have enough resources
-EverStead.Kingdom.has_resources?(kingdom, %{wood: 50, stone: 20})
+Everstead.Kingdom.has_resources?(kingdom, %{wood: 50, stone: 20})
 
 # Add resources
-EverStead.Kingdom.add_resources(kingdom, %{wood: 100})
+Everstead.Kingdom.add_resources(kingdom, %{wood: 100})
 
 # Deduct resources
 EverStead.Kingdom.deduct_resources(kingdom, %{wood: 50})
@@ -322,21 +321,26 @@ Schedule Next Tick
 
 ```
 Everstead.Application
-├── EverStead.Simulation.World.Server
-├── EverStead.Simulation.Player.Supervisor
-│   └── EverStead.Simulation.Player.Server (per player)
-├── EverStead.Simulation.Kingdom.Villager.Supervisor
-│   └── EverStead.Simulation.Kingdom.Villager.Server (per villager)
-├── EverStead.Simulation.Kingdom.JobManager
+├── Everstead.Simulation.World.Supervisor
+│   ├── Everstead.Simulation.World.Server
+│   └── Everstead.Simulation.Player.DynamicSupervisor
+│       └── Everstead.Simulation.Player.Supervisor (per player)
+│           ├── Everstead.Simulation.Player.Server
+│           └── Everstead.Simulation.Kingdom.Supervisor
+│               ├── Everstead.Simulation.Kingdom.Villager.Supervisor
+│               │   └── Everstead.Simulation.Kingdom.Villager.Server (per villager)
+│               └── Everstead.Simulation.Kingdom.JobManager.Supervisor
+│                   └── Everstead.Simulation.Kingdom.JobManager.Server
 └── EversteadWeb.Endpoint
 ```
 
 ### Registry Usage
 
-The game uses two registries for process discovery:
+The game uses three registries for process discovery:
 
 1. **PlayerRegistry**: Maps player IDs to player server PIDs
-2. **VillagerRegistry**: Maps villager IDs to villager server PIDs
+2. **KingdomRegistry**: Maps kingdom IDs to kingdom supervisor PIDs
+3. **VillagerRegistry**: Maps villager IDs to villager server PIDs
 
 ### Process Communication
 
@@ -411,75 +415,5 @@ The architecture supports future modding:
 - **Custom Jobs**: Create new job types
 - **Seasonal Events**: Add special seasonal occurrences
 - **Resource Types**: Introduce new resource types
-
-## Utility Modules
-
-### GameMonitor
-
-The `EverStead.GameMonitor` module provides comprehensive monitoring capabilities for game state and resource gathering progress.
-
-#### Key Features
-
-- **Real-time Monitoring**: Watch kingdom resources, villager inventories, and world state
-- **Progress Tracking**: Monitor resource gathering over time
-- **Status Reports**: Generate formatted reports of current game state
-- **Resource Checking**: Verify if players have sufficient resources for actions
-
-#### Usage Patterns
-
-```elixir
-# Monitor current state
-EverStead.GameMonitor.watch_resources("player1", ["villager1", "villager2"])
-
-# Get structured summary
-summary = EverStead.GameMonitor.get_game_summary("player1", ["villager1"])
-
-# Check resource availability
-has_wood = EverStead.GameMonitor.has_resources?("player1", %{wood: 50, stone: 20})
-```
-
-### ResourceWaiter
-
-The `EverStead.ResourceWaiter` module provides programmatic waiting capabilities for resource accumulation.
-
-#### Key Features
-
-- **Automatic Waiting**: Wait for resources to accumulate naturally
-- **Progress Callbacks**: Monitor progress with custom callback functions
-- **Timeout Handling**: Graceful handling of resource timeouts
-- **Progress Calculation**: Calculate completion percentages
-
-#### Usage Patterns
-
-```elixir
-# Wait for specific resources
-EverStead.ResourceWaiter.wait_for_resources("player1", %{wood: 50, stone: 20})
-
-# Wait with progress monitoring
-callback = fn resources, tick -> IO.puts("Tick #{tick}: #{inspect(resources)}") end
-EverStead.ResourceWaiter.wait_with_progress("player1", %{wood: 50}, 30, callback)
-
-# Check progress percentage
-progress = EverStead.ResourceWaiter.get_progress("player1", %{wood: 100, stone: 50})
-```
-
-### Resource Data Structure
-
-Resources are now stored as a list of Resource structs rather than a simple map:
-
-```elixir
-# New Resource Structure
-[
-  %EverStead.Entities.World.Resource{type: :wood, amount: 0},
-  %EverStead.Entities.World.Resource{type: :stone, amount: 0},
-  %EverStead.Entities.World.Resource{type: :food, amount: 0}
-]
-```
-
-This structure provides:
-- **Type Safety**: Each resource has a defined type
-- **Extensibility**: Easy to add new resource types
-- **Validation**: Built-in validation through Ecto schemas
-- **Consistency**: Uniform data structure across the application
 
 This comprehensive guide covers all the core mechanics of Everstead. The game is designed to be extensible and can grow with additional features while maintaining the solid foundation of resource management, building construction, and villager management.

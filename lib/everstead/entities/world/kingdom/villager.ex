@@ -1,4 +1,4 @@
-defmodule EverStead.Entities.World.Kingdom.Villager do
+defmodule Everstead.Entities.World.Kingdom.Villager do
   @moduledoc """
   Villager entity with profession, state, and location.
   """

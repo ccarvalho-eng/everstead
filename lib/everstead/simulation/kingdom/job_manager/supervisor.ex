@@ -1,11 +1,11 @@
-defmodule Everstead.Simulation.Player.Supervisor do
+defmodule Everstead.Simulation.Kingdom.JobManager.Supervisor do
   @moduledoc """
-  Supervisor for individual player processes.
+  Supervisor for job manager processes.
   """
   use Supervisor
   require Logger
 
-  @doc "Starts the player supervisor."
+  @doc "Starts the job manager supervisor."
   @spec start_link(term()) :: Supervisor.on_start()
   def start_link(init_arg) do
     name =
@@ -21,19 +21,27 @@ defmodule Everstead.Simulation.Player.Supervisor do
   end
 
   @impl true
-  def init({player_id, name}) do
-    kingdom_supervisor_name =
-      {:via, Registry, {Everstead.KingdomRegistry, "kingdom_#{player_id}"}}
+  def init(init_arg) do
+    # Extract kingdom ID from the custom name if provided
+    kingdom_id =
+      case init_arg do
+        {:via, Registry, {Everstead.KingdomRegistry, "jobmanager_sup_" <> kingdom_id}} ->
+          kingdom_id
+
+        _ ->
+          "default"
+      end
+
+    job_manager_name = {:via, Registry, {Everstead.KingdomRegistry, "jobmanager_#{kingdom_id}"}}
 
     children = [
-      {Everstead.Simulation.Player.Server, {player_id, name}},
-      {Everstead.Simulation.Kingdom.Supervisor, kingdom_supervisor_name}
+      {Everstead.Simulation.Kingdom.JobManager.Server, job_manager_name}
     ]
 
     Supervisor.init(children, strategy: :one_for_one, max_restarts: 5, max_seconds: 10)
   end
 
-  @doc "Gets the status of all player processes."
+  @doc "Gets the status of all job manager processes."
   @spec status() :: map()
   def status do
     children = Supervisor.which_children(__MODULE__)

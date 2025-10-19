@@ -1,8 +1,8 @@
-defmodule EverStead.Entities.WorldTest do
+defmodule Everstead.Entities.WorldTest do
   use ExUnit.Case, async: true
 
-  alias EverStead.Entities.World
-  alias EverStead.Entities.World.{Season, Tile}
+  alias Everstead.Entities.World
+  alias Everstead.Entities.World.{Season, Tile}
 
   test "creates a world with valid attributes" do
     tile = struct(Tile)

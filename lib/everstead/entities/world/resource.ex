@@ -1,4 +1,4 @@
-defmodule EverStead.Entities.World.Resource do
+defmodule Everstead.Entities.World.Resource do
   @moduledoc """
   Resource entity with type, amount, and optional location.
   """

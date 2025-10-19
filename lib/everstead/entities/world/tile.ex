@@ -1,11 +1,11 @@
-defmodule EverStead.Entities.World.Tile do
+defmodule Everstead.Entities.World.Tile do
   @moduledoc """
   Tile entity with terrain, resources, and buildings.
   """
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias EverStead.Entities.World.Resource
+  alias Everstead.Entities.World.Resource
 
   @terrain_types [:grass, :forest, :water, :mountain]
 

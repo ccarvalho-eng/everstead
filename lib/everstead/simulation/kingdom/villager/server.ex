@@ -1,4 +1,4 @@
-defmodule EverStead.Simulation.Kingdom.Villager.Server do
+defmodule Everstead.Simulation.Kingdom.Villager.Server do
   @moduledoc """
   GenServer managing individual villager behavior and job execution.
 
@@ -14,9 +14,9 @@ defmodule EverStead.Simulation.Kingdom.Villager.Server do
   use GenServer
   require Logger
 
-  alias EverStead.Entities.World.Kingdom.Villager
-  alias EverStead.Entities.World.Kingdom.Job
-  alias EverStead.World
+  alias Everstead.Entities.World.Kingdom.Villager
+  alias Everstead.Entities.World.Kingdom.Job
+  alias Everstead.World
 
   @gathering_rates %{wood: 5, stone: 3, food: 8}
   @movement_speed 1
@@ -72,6 +72,19 @@ defmodule EverStead.Simulation.Kingdom.Villager.Server do
   end
 
   @doc """
+  Gets the full server state including player_id.
+
+  ## Examples
+
+      iex> VillagerServer.get_full_state("v1")
+      %{villager: %Villager{...}, player_id: "p1", current_job: nil, work_progress: 0}
+  """
+  @spec get_full_state(String.t()) :: map()
+  def get_full_state(villager_id) do
+    GenServer.call(via_tuple(villager_id), :get_full_state)
+  end
+
+  @doc """
   Cancels the villager's current job and returns them to idle state.
 
   ## Examples
@@ -104,12 +117,20 @@ defmodule EverStead.Simulation.Kingdom.Villager.Server do
       work_progress: 0
     }
 
+    # Send a message to the player server to add this villager to the kingdom
+    Everstead.Simulation.Player.Server.add_villager(player_id, villager)
+
     {:ok, state}
   end
 
   @impl true
   def handle_call(:get_state, _from, state) do
     {:reply, state.villager, state}
+  end
+
+  @impl true
+  def handle_call(:get_full_state, _from, state) do
+    {:reply, state, state}
   end
 
   @impl true
@@ -146,14 +167,21 @@ defmodule EverStead.Simulation.Kingdom.Villager.Server do
 
   @impl true
   def handle_info(:tick, state) do
-    new_state = process_tick(state)
-    {:noreply, new_state}
+    try do
+      new_state = process_tick(state)
+      {:noreply, new_state}
+    catch
+      error ->
+        Logger.error("Error processing tick for villager #{state.villager.id}: #{inspect(error)}")
+        # Return the state unchanged on error to prevent crashes
+        {:noreply, state}
+    end
   end
 
   # Private Functions
 
   defp via_tuple(villager_id) do
-    {:via, Registry, {EverStead.VillagerRegistry, villager_id}}
+    {:via, Registry, {Everstead.VillagerRegistry, villager_id}}
   end
 
   @spec process_tick(map()) :: map()
