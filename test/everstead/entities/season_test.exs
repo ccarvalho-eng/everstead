@@ -6,7 +6,7 @@ defmodule Everstead.Entities.SeasonTest do
 
   describe "season_duration/0" do
     test "returns the configured season duration" do
-      assert World.season_duration() == 60
+      assert World.season_duration() == 300
     end
   end
 
@@ -39,7 +39,7 @@ defmodule Everstead.Entities.SeasonTest do
     end
 
     test "progresses to next season when duration is reached" do
-      season = %Season{current: :spring, ticks_elapsed: 59, year: 1}
+      season = %Season{current: :spring, ticks_elapsed: 299, year: 1}
       updated = World.tick_season(season)
 
       assert updated.current == :summer
@@ -48,7 +48,7 @@ defmodule Everstead.Entities.SeasonTest do
     end
 
     test "increments year when winter transitions to spring" do
-      season = %Season{current: :winter, ticks_elapsed: 59, year: 1}
+      season = %Season{current: :winter, ticks_elapsed: 299, year: 1}
       updated = World.tick_season(season)
 
       assert updated.current == :spring
@@ -60,22 +60,22 @@ defmodule Everstead.Entities.SeasonTest do
       season = %Season{current: :spring, ticks_elapsed: 0, year: 1}
 
       # Advance through spring
-      season = Enum.reduce(1..60, season, fn _, s -> World.tick_season(s) end)
+      season = Enum.reduce(1..300, season, fn _, s -> World.tick_season(s) end)
       assert season.current == :summer
       assert season.ticks_elapsed == 0
 
       # Advance through summer
-      season = Enum.reduce(1..60, season, fn _, s -> World.tick_season(s) end)
+      season = Enum.reduce(1..300, season, fn _, s -> World.tick_season(s) end)
       assert season.current == :fall
       assert season.ticks_elapsed == 0
 
       # Advance through fall
-      season = Enum.reduce(1..60, season, fn _, s -> World.tick_season(s) end)
+      season = Enum.reduce(1..300, season, fn _, s -> World.tick_season(s) end)
       assert season.current == :winter
       assert season.ticks_elapsed == 0
 
       # Advance through winter - should go to year 2
-      season = Enum.reduce(1..60, season, fn _, s -> World.tick_season(s) end)
+      season = Enum.reduce(1..300, season, fn _, s -> World.tick_season(s) end)
       assert season.current == :spring
       assert season.ticks_elapsed == 0
       assert season.year == 2
@@ -133,6 +133,42 @@ defmodule Everstead.Entities.SeasonTest do
 
     test "returns 0.6 for winter (harsh conditions)" do
       assert World.construction_multiplier(:winter) == 0.6
+    end
+  end
+
+  describe "movement_multiplier/1" do
+    test "returns 1.0 for spring" do
+      assert World.movement_multiplier(:spring) == 1.0
+    end
+
+    test "returns 1.1 for summer (good weather)" do
+      assert World.movement_multiplier(:summer) == 1.1
+    end
+
+    test "returns 0.9 for fall (slippery paths)" do
+      assert World.movement_multiplier(:fall) == 0.9
+    end
+
+    test "returns 0.7 for winter (snowy terrain)" do
+      assert World.movement_multiplier(:winter) == 0.7
+    end
+  end
+
+  describe "food_consumption_multiplier/1" do
+    test "returns 1.0 for spring" do
+      assert World.food_consumption_multiplier(:spring) == 1.0
+    end
+
+    test "returns 1.2 for summer (high activity)" do
+      assert World.food_consumption_multiplier(:summer) == 1.2
+    end
+
+    test "returns 1.1 for fall (preparation)" do
+      assert World.food_consumption_multiplier(:fall) == 1.1
+    end
+
+    test "returns 1.3 for winter (harsh conditions)" do
+      assert World.food_consumption_multiplier(:winter) == 1.3
     end
   end
 

@@ -29,6 +29,8 @@ defmodule Everstead.Simulation.Kingdom.Supervisor do
         _ -> "default"
       end
 
+    Logger.info("Extracted kingdom_id: #{kingdom_id}")
+
     villager_supervisor_name =
       {:via, Registry, {Everstead.KingdomRegistry, "villagers_#{kingdom_id}"}}
 
@@ -36,12 +38,9 @@ defmodule Everstead.Simulation.Kingdom.Supervisor do
       {:via, Registry, {Everstead.KingdomRegistry, "jobmanager_sup_#{kingdom_id}"}}
 
     children = [
-      {Everstead.Simulation.Kingdom.JobManager.Supervisor, job_manager_supervisor_name},
-      {Everstead.Simulation.Kingdom.Villager.Supervisor, villager_supervisor_name}
+      {Everstead.Simulation.Kingdom.JobManager.Supervisor, {job_manager_supervisor_name, :ok}},
+      {Everstead.Simulation.Kingdom.Villager.Supervisor, {villager_supervisor_name, :ok}}
     ]
-
-    # Debug: log the children being started
-    Logger.info("Kingdom supervisor starting children: #{inspect(children)}")
 
     Supervisor.init(children, strategy: :one_for_one, max_restarts: 5, max_seconds: 10)
   end

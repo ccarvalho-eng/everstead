@@ -8,25 +8,17 @@ defmodule Everstead.Simulation.Player.Supervisor do
   @doc "Starts the player supervisor."
   @spec start_link(term()) :: Supervisor.on_start()
   def start_link(init_arg) do
-    name =
-      if is_tuple(init_arg) and tuple_size(init_arg) == 3 do
-        # Custom name provided
-        init_arg
-      else
-        # Default name
-        __MODULE__
-      end
-
+    name = __MODULE__
     Supervisor.start_link(__MODULE__, init_arg, name: name)
   end
 
   @impl true
-  def init({player_id, name}) do
+  def init({player_id, name, kingdom_name}) do
     kingdom_supervisor_name =
       {:via, Registry, {Everstead.KingdomRegistry, "kingdom_#{player_id}"}}
 
     children = [
-      {Everstead.Simulation.Player.Server, {player_id, name}},
+      {Everstead.Simulation.Player.Server, {player_id, name, kingdom_name}},
       {Everstead.Simulation.Kingdom.Supervisor, kingdom_supervisor_name}
     ]
 

@@ -15,6 +15,7 @@ defmodule Everstead.Simulation.World.Server do
   ## Season System
   Tracks the current season (Spring, Summer, Fall, Winter) and year,
   automatically progressing through seasons based on tick count.
+  Features immersive time formatting with named years and day/night cycles.
   """
   use GenServer
 
@@ -78,16 +79,38 @@ defmodule Everstead.Simulation.World.Server do
     new_season = World.tick_season(state.season)
     new_total_ticks = state.total_ticks + 1
 
-    # Log season changes
+    # Log season changes with immersive descriptions
     if new_season.current != state.season.current do
+      year_name = World.year_name(new_season.year)
+      old_season = World.season_to_string(state.season.current)
+      new_season_name = World.season_to_string(new_season.current)
+
       Logger.info(
-        "Season changed: #{World.season_to_string(state.season.current)} -> #{World.season_to_string(new_season.current)} (Year #{new_season.year})"
+        "#{year_name} - The season turns from #{old_season} to #{new_season_name}. " <>
+          "The world awakens to new possibilities..."
       )
     end
 
-    Logger.debug(
-      "World tick ##{new_total_ticks} | #{World.season_to_string(new_season.current)} - Day #{new_season.ticks_elapsed + 1}/#{World.season_duration()}"
-    )
+    # Create immersive daily logs
+    # Every 60 ticks (full day cycle)
+    if rem(new_total_ticks, 60) == 0 do
+      time = World.time_of_day(new_season)
+      weather = World.get_weather(new_season.current, time)
+      world_event = World.get_world_event(new_season.current, time)
+      year_name = World.year_name(new_season.year)
+
+      Logger.info(
+        "Year #{new_season.year} (#{year_name}) - Day #{World.day_of_season(new_season)}, #{time} - #{World.season_to_string(new_season.current)} | #{weather} | #{world_event}"
+      )
+    else
+      # Show clock progression in debug logs
+      clock_time = World.clock_time(new_season)
+      year_name = World.year_name(new_season.year)
+
+      Logger.debug(
+        "Year #{new_season.year} (#{year_name}) - Day #{World.day_of_season(new_season)}, #{clock_time} (#{World.time_of_day(new_season)}) - #{World.season_to_string(new_season.current)}"
+      )
+    end
 
     # Broadcast tick to all PlayerServers and VillagerServers
     Everstead.Simulation.Player.DynamicSupervisor.broadcast_tick()

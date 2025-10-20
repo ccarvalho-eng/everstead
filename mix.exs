@@ -11,7 +11,7 @@ defmodule Everstead.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader],
+      listeners: [Phoenix.CodeReloader]
     ]
   end
 
@@ -30,7 +30,6 @@ defmodule Everstead.MixProject do
       preferred_envs: [precommit: :test]
     ]
   end
-
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -66,7 +65,7 @@ defmodule Everstead.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"},
+      {:bandit, "~> 1.5"}
     ]
   end
 

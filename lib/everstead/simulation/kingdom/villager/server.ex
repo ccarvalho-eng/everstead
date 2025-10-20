@@ -208,17 +208,50 @@ defmodule Everstead.Simulation.Kingdom.Villager.Server do
     resource_type = job.target.type
     base_rate = Map.get(@gathering_rates, resource_type, 5)
 
-    # Apply seasonal multipliers (you can get season from WorldServer in real implementation)
-    # For now, using base rate
-    gathered = base_rate
+    # Get current season and apply seasonal multipliers
+    world_state = Everstead.Simulation.World.Server.get_state()
+    current_season = world_state.season.current
+
+    # Apply seasonal multiplier based on resource type
+    multiplier =
+      case resource_type do
+        :food -> Everstead.World.farming_multiplier(current_season)
+        _ -> Everstead.World.resource_multiplier(current_season)
+      end
+
+    gathered = floor(base_rate * multiplier)
 
     updated_inventory =
       Map.update(state.villager.inventory, resource_type, gathered, &(&1 + gathered))
 
     updated_villager = %{state.villager | inventory: updated_inventory}
 
+    # Get current time for immersive logging
+    year_name = Everstead.World.year_name(world_state.season.year)
+
+    time_str =
+      "Year #{world_state.season.year} (#{year_name}) - Day #{Everstead.World.day_of_season(world_state.season)}, #{Everstead.World.clock_time(world_state.season)} (#{Everstead.World.time_of_day(world_state.season)}) - #{Everstead.World.season_to_string(world_state.season.current)}"
+
+    # Create resource-specific gathering messages with seasonal context
+    gathering_message =
+      case resource_type do
+        :wood -> "#{state.villager.name} chops wood in the forest"
+        :stone -> "#{state.villager.name} mines stone from the quarry"
+        :food -> "#{state.villager.name} harvests food from the fields"
+        _ -> "#{state.villager.name} gathers #{resource_type}"
+      end
+
+    # Add seasonal context to the message
+    seasonal_context =
+      case current_season do
+        :spring -> " (spring growth)"
+        :summer -> " (summer abundance)"
+        :fall -> " (autumn harvest)"
+        :winter -> " (winter scarcity)"
+      end
+
     Logger.debug(
-      "Villager #{state.villager.id} gathered #{gathered} #{resource_type} (total: #{updated_inventory[resource_type]})"
+      "#{time_str} | #{gathering_message}#{seasonal_context} (+#{gathered}, total: #{updated_inventory[resource_type]}) [#{current_season} x#{multiplier}]"
     )
 
     %{state | villager: updated_villager}
@@ -253,12 +286,35 @@ defmodule Everstead.Simulation.Kingdom.Villager.Server do
 
   @spec process_building(map()) :: map()
   defp process_building(state) do
-    # Building progress is handled by KingdomBuilder
-    # Here we just track that the villager is working
-    new_progress = state.work_progress + 1
+    # Get current season and apply construction multiplier
+    world_state = Everstead.Simulation.World.Server.get_state()
+    current_season = world_state.season.current
+    construction_multiplier = Everstead.World.construction_multiplier(current_season)
+
+    # Building progress is affected by season
+    # Base progress is 1, but seasons affect construction speed
+    base_progress = 1
+    seasonal_progress = floor(base_progress * construction_multiplier)
+    # Ensure at least 1 progress
+    new_progress = state.work_progress + max(seasonal_progress, 1)
+
+    # Get current time for immersive logging
+    year_name = Everstead.World.year_name(world_state.season.year)
+
+    time_str =
+      "Year #{world_state.season.year} (#{year_name}) - Day #{Everstead.World.day_of_season(world_state.season)}, #{Everstead.World.clock_time(world_state.season)} (#{Everstead.World.time_of_day(world_state.season)}) - #{Everstead.World.season_to_string(world_state.season.current)}"
+
+    # Add seasonal context to construction message
+    seasonal_context =
+      case current_season do
+        :spring -> " (favorable conditions)"
+        :summer -> " (optimal weather)"
+        :fall -> " (good conditions)"
+        :winter -> " (harsh weather)"
+      end
 
     Logger.debug(
-      "Villager #{state.villager.id} working on construction (progress: #{new_progress})"
+      "#{time_str} | #{state.villager.name} works on construction#{seasonal_context} (progress: #{new_progress}) [#{current_season} x#{construction_multiplier}]"
     )
 
     %{state | work_progress: new_progress}
@@ -270,20 +326,40 @@ defmodule Everstead.Simulation.Kingdom.Villager.Server do
     current_loc = state.villager.location
     target_loc = get_target_location(job.target)
 
+    # Get current time for immersive logging
+    world_state = Everstead.Simulation.World.Server.get_state()
+    year_name = Everstead.World.year_name(world_state.season.year)
+
+    time_str =
+      "Year #{world_state.season.year} (#{year_name}) - Day #{Everstead.World.day_of_season(world_state.season)}, #{Everstead.World.clock_time(world_state.season)} (#{Everstead.World.time_of_day(world_state.season)}) - #{Everstead.World.season_to_string(world_state.season.current)}"
+
     if current_loc == target_loc do
       # Reached destination
-      Logger.info("Villager #{state.villager.id} reached destination #{inspect(target_loc)}")
+      Logger.info(
+        "#{time_str} | #{state.villager.name} has arrived at destination #{inspect(target_loc)}"
+      )
 
       updated_villager = %{state.villager | state: :idle, location: target_loc}
 
       %{state | villager: updated_villager, current_job: nil, work_progress: 0}
     else
       # Move towards target
+      current_season = world_state.season.current
+      movement_multiplier = Everstead.World.movement_multiplier(current_season)
       new_location = move_towards(current_loc, target_loc)
       updated_villager = %{state.villager | location: new_location, state: :moving}
 
+      # Add seasonal context to movement message
+      movement_context =
+        case current_season do
+          :spring -> " (spring paths)"
+          :summer -> " (dry trails)"
+          :fall -> " (leafy paths)"
+          :winter -> " (snowy terrain)"
+        end
+
       Logger.debug(
-        "Villager #{state.villager.id} moving: #{inspect(current_loc)} -> #{inspect(new_location)}"
+        "#{time_str} | #{state.villager.name} travels#{movement_context} from #{inspect(current_loc)} to #{inspect(new_location)} [#{current_season} x#{movement_multiplier}]"
       )
 
       %{state | villager: updated_villager}
@@ -296,9 +372,16 @@ defmodule Everstead.Simulation.Kingdom.Villager.Server do
 
   @spec move_towards({integer(), integer()}, {integer(), integer()}) :: {integer(), integer()}
   defp move_towards({x1, y1}, {x2, y2}) do
-    speed = @movement_speed
-    dx = clamp(x2 - x1, -speed, speed)
-    dy = clamp(y2 - y1, -speed, speed)
+    # Get current season and apply movement multiplier
+    world_state = Everstead.Simulation.World.Server.get_state()
+    current_season = world_state.season.current
+    movement_multiplier = Everstead.World.movement_multiplier(current_season)
+
+    base_speed = @movement_speed
+    effective_speed = max(1, floor(base_speed * movement_multiplier))
+
+    dx = clamp(x2 - x1, -effective_speed, effective_speed)
+    dy = clamp(y2 - y1, -effective_speed, effective_speed)
     {x1 + dx, y1 + dy}
   end
 

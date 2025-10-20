@@ -18,13 +18,13 @@ defmodule Everstead.Simulation.Player.Server do
   Starts a player server process.
 
   ## Parameters
-  - `{id, name}` - Tuple containing the player ID and display name
+  - `{id, name, kingdom_name}` - Tuple containing the player ID, display name, and kingdom name
 
   The server is registered via the PlayerRegistry using the player ID.
   """
-  @spec start_link({String.t(), String.t()}) :: GenServer.on_start()
-  def start_link({id, name}) do
-    GenServer.start_link(__MODULE__, {id, name}, name: via_tuple(id))
+  @spec start_link({String.t(), String.t(), String.t()}) :: GenServer.on_start()
+  def start_link({id, name, kingdom_name}) do
+    GenServer.start_link(__MODULE__, {id, name, kingdom_name}, name: via_tuple(id))
   end
 
   @doc """
@@ -102,16 +102,22 @@ defmodule Everstead.Simulation.Player.Server do
   defp via_tuple(id), do: {:via, Registry, {Everstead.PlayerRegistry, id}}
 
   @impl true
-  def init({id, name}) do
+  def init({id, name, kingdom_name}) do
+    # Create 5 default villagers
+    default_villagers = create_default_villagers(id)
+
+    # Create some default buildings
+    default_buildings = create_default_buildings(id)
+
     kingdom = %Kingdom{
       id: "kingdom_#{id}",
-      name: "#{name}'s Kingdom",
-      villagers: [],
-      buildings: [],
+      name: kingdom_name,
+      villagers: default_villagers,
+      buildings: default_buildings,
       resources: [
-        %Everstead.Entities.World.Resource{type: :wood, amount: 0},
-        %Everstead.Entities.World.Resource{type: :stone, amount: 0},
-        %Everstead.Entities.World.Resource{type: :food, amount: 0}
+        %Everstead.Entities.World.Resource{type: :wood, amount: 500},
+        %Everstead.Entities.World.Resource{type: :stone, amount: 300},
+        %Everstead.Entities.World.Resource{type: :food, amount: 1000}
       ]
     }
 
@@ -121,8 +127,151 @@ defmodule Everstead.Simulation.Player.Server do
       kingdom: kingdom
     }
 
-    Logger.info("Player server started for #{name} (#{id})")
+    Logger.info(
+      "Player server started for #{name} (#{id}) with kingdom '#{kingdom_name}' - #{length(default_villagers)} villagers and #{length(default_buildings)} buildings"
+    )
+
+    # Start villager server processes after a short delay to ensure kingdom supervisor is ready
+    Process.send_after(self(), :start_villager_servers, 100)
+
     {:ok, player}
+  end
+
+  defp create_default_villagers(player_id) do
+    # Medieval/mystical name pools
+    medieval_names = [
+      "Thorin",
+      "Eldara",
+      "Gareth",
+      "Aria",
+      "Finnian",
+      "Lysander",
+      "Seraphina",
+      "Caspian",
+      "Isolde",
+      "Benedict",
+      "Celeste",
+      "Orion",
+      "Luna",
+      "Percival",
+      "Aurelia",
+      "Magnus",
+      "Ophelia",
+      "Cedric",
+      "Vivienne",
+      "Tristan",
+      "Elara",
+      "Dorian",
+      "Cassandra",
+      "Leander",
+      "Aurora",
+      "Valentine",
+      "Lilith",
+      "Phoenix",
+      "Evangeline",
+      "Atticus",
+      "Persephone",
+      "Lucian",
+      "Cordelia",
+      "Maximus",
+      "Beatrice",
+      "Sebastian",
+      "Ophelia",
+      "Damien",
+      "Seraphina",
+      "Alexander",
+      "Guinevere",
+      "Raphael",
+      "Isabella",
+      "Gabriel",
+      "Violet",
+      "Nathaniel"
+    ]
+
+    # 2 builders, 2 farmers, 1 miner
+    professions = [:builder, :farmer, :miner, :builder, :farmer]
+
+    # Randomly select 5 unique names
+    selected_names = medieval_names |> Enum.shuffle() |> Enum.take(5)
+
+    villager_data =
+      selected_names
+      |> Enum.with_index(1)
+      |> Enum.zip(professions)
+      |> Enum.map(fn {{name, index}, profession} ->
+        {"v#{index}", name, profession}
+      end)
+
+    Enum.map(villager_data, fn {villager_id, villager_name, profession} ->
+      %Everstead.Entities.World.Kingdom.Villager{
+        id: "#{player_id}_#{villager_id}",
+        name: villager_name,
+        state: :idle,
+        profession: profession,
+        location: %{x: 0, y: 0},
+        inventory: %{}
+      }
+    end)
+  end
+
+  defp create_default_buildings(player_id) do
+    building_data = [
+      # Main house - fully built
+      {"b1", :house, {5, 5}, 100},
+      # Second house - fully built
+      {"b2", :house, {8, 5}, 100},
+      # Farm - fully built
+      {"b3", :farm, {2, 2}, 100},
+      # Lumberyard - fully built
+      {"b4", :lumberyard, {10, 10}, 100},
+      # Storage - fully built
+      {"b5", :storage, {12, 8}, 100},
+      # House under construction
+      {"b6", :house, {15, 3}, 75},
+      # Farm under construction
+      {"b7", :farm, {3, 8}, 50}
+    ]
+
+    Enum.map(building_data, fn {building_id, building_type, location, progress} ->
+      %Everstead.Entities.World.Kingdom.Building{
+        id: "#{player_id}_#{building_id}",
+        type: building_type,
+        location: location,
+        construction_progress: progress,
+        hp: 100
+      }
+    end)
+  end
+
+  defp start_villager_servers(villagers, player_id) do
+    case Registry.lookup(Everstead.KingdomRegistry, "villagers_#{player_id}") do
+      [] ->
+        Logger.warning("Villager supervisor not found for player #{player_id}")
+
+      [{_pid, _value}] ->
+        Logger.info("Villager supervisor found for player #{player_id}, starting villagers...")
+
+        Enum.each(villagers, fn villager ->
+          # Extract villager name from the villager entity
+          villager_name = villager.name
+          villager_id = villager.id
+
+          # Start the villager server process
+          case Everstead.Simulation.Kingdom.Villager.Supervisor.start_villager(
+                 villager_id,
+                 villager_name,
+                 player_id
+               ) do
+            {:ok, _pid} ->
+              Logger.info("Started villager server for #{villager_name} (#{villager_id})")
+
+            {:error, reason} ->
+              Logger.warning(
+                "Failed to start villager server for #{villager_name} (#{villager_id}): #{inspect(reason)}"
+              )
+          end
+        end)
+    end
   end
 
   @impl true
@@ -204,8 +353,22 @@ defmodule Everstead.Simulation.Player.Server do
   end
 
   @impl true
+  def handle_info(:start_villager_servers, player) do
+    # Start villager server processes for the default villagers
+    start_villager_servers(player.kingdom.villagers, player.id)
+    {:noreply, player}
+  end
+
+  @impl true
   def handle_info(:tick, player) do
     try do
+      # Get current world time for immersive logging
+      world_state = Everstead.Simulation.World.Server.get_state()
+      year_name = Everstead.World.year_name(world_state.season.year)
+
+      time_str =
+        "Year #{world_state.season.year} (#{year_name}) - Day #{Everstead.World.day_of_season(world_state.season)}, #{Everstead.World.clock_time(world_state.season)} (#{Everstead.World.time_of_day(world_state.season)}) - #{Everstead.World.season_to_string(world_state.season.current)}"
+
       # Get all villager processes for this player and create a map for job assignment
       villager_map =
         Registry.select(Everstead.VillagerRegistry, [{{:"$1", :"$2", :"$3"}, [], [:"$1"]}])
@@ -220,12 +383,15 @@ defmodule Everstead.Simulation.Player.Server do
             end
           catch
             :exit, reason ->
-              Logger.warning("Villager #{villager_id} exited during tick: #{inspect(reason)}")
+              Logger.warning(
+                "#{time_str} | Villager #{villager_id} has left the kingdom: #{inspect(reason)}"
+              )
+
               acc
 
             error ->
               Logger.error(
-                "Error getting villager #{villager_id} state during tick: #{inspect(error)}"
+                "#{time_str} | Error getting villager #{villager_id} state: #{inspect(error)}"
               )
 
               acc
@@ -238,9 +404,22 @@ defmodule Everstead.Simulation.Player.Server do
           {:via, Registry, {Everstead.KingdomRegistry, "jobmanager_#{player.id}"}}
 
         Everstead.Simulation.Kingdom.JobManager.Server.assign_jobs(job_manager_name, villager_map)
+
+        # Log kingdom activity
+        active_villagers =
+          Enum.count(villager_map, fn {_id, villager} -> villager.state == :working end)
+
+        idle_villagers =
+          Enum.count(villager_map, fn {_id, villager} -> villager.state == :idle end)
+
+        if active_villagers > 0 or idle_villagers > 0 do
+          Logger.debug(
+            "#{time_str} | Kingdom of #{player.kingdom.name}: #{active_villagers} working, #{idle_villagers} idle"
+          )
+        end
       catch
         error ->
-          Logger.error("Error assigning jobs to villagers: #{inspect(error)}")
+          Logger.error("#{time_str} | Error assigning jobs to villagers: #{inspect(error)}")
       end
 
       {:noreply, player}

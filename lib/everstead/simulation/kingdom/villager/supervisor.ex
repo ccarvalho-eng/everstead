@@ -8,21 +8,18 @@ defmodule Everstead.Simulation.Kingdom.Villager.Supervisor do
   @doc "Starts the villager supervisor."
   @spec start_link(term()) :: Supervisor.on_start()
   def start_link(init_arg) do
-    # Debug: log the init_arg being received
-    require Logger
-    Logger.info("Villager supervisor received init_arg: #{inspect(init_arg)}")
-
     name =
       case init_arg do
+        {{:via, Registry, {Everstead.KingdomRegistry, "villagers_" <> _kingdom_id}} = custom_name,
+         :ok} ->
+          custom_name
+
         {:via, Registry, {Everstead.KingdomRegistry, "villagers_" <> _kingdom_id}} = custom_name ->
           custom_name
 
         _ ->
           __MODULE__
       end
-
-    # Debug: log the name being used
-    Logger.info("Villager supervisor starting with name: #{inspect(name)}")
 
     DynamicSupervisor.start_link(__MODULE__, :ok, name: name)
   end
